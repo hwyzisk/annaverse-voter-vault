@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Phone, Mail, AlertTriangle, Search } from "lucide-react";
 import type { Contact } from "@shared/schema";
 
 interface SearchResultsProps {
@@ -93,7 +94,7 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
       <Card>
         <CardContent className="p-6">
           <div className="text-center text-destructive">
-            <i className="fas fa-exclamation-triangle text-2xl mb-2"></i>
+            <AlertTriangle className="w-8 h-8 mb-2" />
             <p>Search failed. Please try again.</p>
           </div>
         </CardContent>
@@ -117,7 +118,7 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
       
       {contacts.length === 0 ? (
         <CardContent className="p-6 text-center text-muted-foreground">
-          <i className="fas fa-search text-4xl mb-4 opacity-50"></i>
+          <Search className="w-16 h-16 mb-4 opacity-50" />
           <p>No contacts found matching your search criteria.</p>
           <p className="text-sm mt-2">Try adjusting your search terms or filters.</p>
         </CardContent>
@@ -164,8 +165,8 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
-                        <i className="fas fa-phone text-green-600 text-xs"></i>
-                        <i className="fas fa-envelope text-blue-600 text-xs"></i>
+                        <Phone className="w-3 h-3 text-green-600" />
+                        <Mail className="w-3 h-3 text-blue-600" />
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">

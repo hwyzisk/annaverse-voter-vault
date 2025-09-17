@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { ChevronDown, User as UserIcon, Settings, LogOut } from "lucide-react";
 
 interface HeaderProps {
   user: User;
@@ -65,7 +66,7 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
                   <Badge variant="secondary" className="text-xs">
                     {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                   </Badge>
-                  <i className="fas fa-chevron-down text-xs text-muted-foreground"></i>
+                  <ChevronDown className="w-3 h-3 text-muted-foreground" />
                 </div>
               </Button>
             </DropdownMenuTrigger>
@@ -89,16 +90,16 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
               </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => onProfileClick?.()}>
-                <i className="fas fa-user mr-2 w-4"></i>
+                <UserIcon className="mr-2 w-4 h-4" />
                 View Profile
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <i className="fas fa-cog mr-2 w-4"></i>
+                <Settings className="mr-2 w-4 h-4" />
                 Account Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-                <i className="fas fa-sign-out-alt mr-2 w-4"></i>
+                <LogOut className="mr-2 w-4 h-4" />
                 Sign Out
               </DropdownMenuItem>
             </DropdownMenuContent>

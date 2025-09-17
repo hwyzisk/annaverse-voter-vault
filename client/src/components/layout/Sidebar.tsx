@@ -1,5 +1,6 @@
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon } from "lucide-react";
 
 interface SidebarProps {
   user: User;
@@ -29,7 +30,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
       <div className="p-6 border-b border-border">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <i className="fas fa-vote-yea text-primary-foreground text-sm"></i>
+            <Vote className="w-4 h-4 text-primary-foreground" />
           </div>
           <h1 className="text-xl font-bold text-foreground">VoterVault</h1>
         </div>
@@ -43,7 +44,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
               className="flex items-center space-x-3 px-3 py-2 rounded-md bg-primary text-primary-foreground"
               data-testid="link-search"
             >
-              <i className="fas fa-search w-5"></i>
+              <Search className="w-5 h-5" />
               <span>Search Contacts</span>
             </a>
           </li>
@@ -59,7 +60,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
                   className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
                   data-testid="button-user-management"
                 >
-                  <i className="fas fa-users w-5"></i>
+                  <Users className="w-5 h-5" />
                   <span>User Management</span>
                 </button>
               </li>
@@ -69,7 +70,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
                   className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
                   data-testid="button-audit-logs"
                 >
-                  <i className="fas fa-clipboard-list w-5"></i>
+                  <ClipboardList className="w-5 h-5" />
                   <span>Audit Logs</span>
                 </button>
               </li>
@@ -79,7 +80,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
                   className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
                   data-testid="button-settings"
                 >
-                  <i className="fas fa-cog w-5"></i>
+                  <Settings className="w-5 h-5" />
                   <span>Settings</span>
                 </button>
               </li>
@@ -98,7 +99,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <i className="fas fa-user text-muted-foreground text-sm"></i>
+              <UserIcon className="w-4 h-4 text-muted-foreground" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -121,7 +122,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
           className="w-full justify-start p-0 h-auto text-sm text-muted-foreground hover:text-foreground"
           data-testid="button-logout"
         >
-          <i className="fas fa-sign-out-alt mr-2"></i>Sign Out
+          <LogOut className="w-4 h-4 mr-2" />Sign Out
         </Button>
       </div>
     </aside>

@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo } from "lucide-react";
 import type { Contact, User, ContactPhone, ContactEmail, ContactAlias } from "@shared/schema";
 
 interface ProfileModalProps {
@@ -343,7 +344,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                         {details.phones.map((phone) => (
                           <div key={phone.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                             <div className="flex items-center space-x-3">
-                              <i className="fas fa-phone text-muted-foreground"></i>
+                              <Phone className="w-4 h-4 text-muted-foreground" />
                               <div>
                                 <p className="text-sm font-medium">{phone.phoneNumber}</p>
                                 <p className="text-xs text-muted-foreground">
@@ -354,10 +355,10 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             {canEdit && (
                               <div className="flex items-center space-x-2">
                                 <Button variant="ghost" size="sm">
-                                  <i className="fas fa-edit text-xs"></i>
+                                  <Edit className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" className="text-destructive">
-                                  <i className="fas fa-trash text-xs"></i>
+                                  <Trash2 className="w-3 h-3" />
                                 </Button>
                               </div>
                             )}
@@ -388,7 +389,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               disabled={!newPhone.phoneNumber || addPhoneMutation.isPending}
                               data-testid="button-add-phone"
                             >
-                              <i className="fas fa-plus"></i>
+                              <Plus className="w-4 h-4" />
                             </Button>
                           </div>
                         )}
@@ -404,7 +405,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                         {details.emails.map((email) => (
                           <div key={email.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                             <div className="flex items-center space-x-3">
-                              <i className="fas fa-envelope text-muted-foreground"></i>
+                              <Mail className="w-4 h-4 text-muted-foreground" />
                               <div>
                                 <p className="text-sm font-medium">{email.email}</p>
                                 <p className="text-xs text-muted-foreground">
@@ -415,10 +416,10 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             {canEdit && (
                               <div className="flex items-center space-x-2">
                                 <Button variant="ghost" size="sm">
-                                  <i className="fas fa-edit text-xs"></i>
+                                  <Edit className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" className="text-destructive">
-                                  <i className="fas fa-trash text-xs"></i>
+                                  <Trash2 className="w-3 h-3" />
                                 </Button>
                               </div>
                             )}
@@ -449,7 +450,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               disabled={!newEmail.email || addEmailMutation.isPending}
                               data-testid="button-add-email"
                             >
-                              <i className="fas fa-plus"></i>
+                              <Plus className="w-4 h-4" />
                             </Button>
                           </div>
                         )}
