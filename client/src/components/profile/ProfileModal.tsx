@@ -36,6 +36,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   const [newAlias, setNewAlias] = useState("");
   const [newPhone, setNewPhone] = useState({ phoneNumber: "", phoneType: "mobile" as const });
   const [newEmail, setNewEmail] = useState({ email: "", emailType: "personal" as const });
+  const [editingPhone, setEditingPhone] = useState<{ id: string; phoneNumber: string; phoneType: string } | null>(null);
+  const [editingEmail, setEditingEmail] = useState<{ id: string; email: string; emailType: string } | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -106,6 +108,76 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
       toast({
         title: "Error",
         description: "Failed to add email address",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePhoneMutation = useMutation({
+    mutationFn: async ({ phoneId, updates }: { phoneId: string; updates: { phoneNumber: string; phoneType: string } }) => {
+      await apiRequest('PATCH', `/api/phones/${phoneId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
+      setEditingPhone(null);
+      toast({ title: "Phone number updated" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update phone number",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deletePhoneMutation = useMutation({
+    mutationFn: async (phoneId: string) => {
+      await apiRequest('DELETE', `/api/phones/${phoneId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
+      toast({ title: "Phone number deleted" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete phone number",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEmailMutation = useMutation({
+    mutationFn: async ({ emailId, updates }: { emailId: string; updates: { email: string; emailType: string } }) => {
+      await apiRequest('PATCH', `/api/emails/${emailId}`, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
+      setEditingEmail(null);
+      toast({ title: "Email address updated" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update email address",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteEmailMutation = useMutation({
+    mutationFn: async (emailId: string) => {
+      await apiRequest('DELETE', `/api/emails/${emailId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
+      toast({ title: "Email address deleted" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete email address",
         variant: "destructive",
       });
     },
@@ -343,24 +415,86 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       <div className="space-y-2 mt-2">
                         {details.phones.map((phone) => (
                           <div key={phone.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                            <div className="flex items-center space-x-3">
-                              <Phone className="w-4 h-4 text-muted-foreground" />
-                              <div>
-                                <p className="text-sm font-medium">{phone.phoneNumber}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {phone.phoneType} {phone.isPrimary && '• Primary'}
-                                </p>
+                            {editingPhone?.id === phone.id ? (
+                              <div className="flex-1 flex items-center space-x-2">
+                                <Phone className="w-4 h-4 text-muted-foreground" />
+                                <Input
+                                  value={editingPhone.phoneNumber}
+                                  onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneNumber: e.target.value } : null)}
+                                  className="flex-1"
+                                  data-testid={`input-edit-phone-${phone.id}`}
+                                />
+                                <select 
+                                  value={editingPhone.phoneType}
+                                  onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneType: e.target.value } : null)}
+                                  className="px-3 py-2 border border-input rounded-md"
+                                >
+                                  <option value="mobile">Mobile</option>
+                                  <option value="home">Home</option>
+                                  <option value="work">Work</option>
+                                  <option value="other">Other</option>
+                                </select>
+                                <div className="flex items-center space-x-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => updatePhoneMutation.mutate({
+                                      phoneId: phone.id,
+                                      updates: { phoneNumber: editingPhone.phoneNumber, phoneType: editingPhone.phoneType }
+                                    })}
+                                    disabled={updatePhoneMutation.isPending}
+                                    data-testid={`button-save-phone-${phone.id}`}
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setEditingPhone(null)}
+                                    data-testid={`button-cancel-phone-${phone.id}`}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                            {canEdit && (
-                              <div className="flex items-center space-x-2">
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-destructive">
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center space-x-3">
+                                  <Phone className="w-4 h-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm font-medium">{phone.phoneNumber}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {phone.phoneType} {phone.isPrimary && '• Primary'}
+                                    </p>
+                                  </div>
+                                </div>
+                                {canEdit && (
+                                  <div className="flex items-center space-x-2">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => setEditingPhone({
+                                        id: phone.id,
+                                        phoneNumber: phone.phoneNumber,
+                                        phoneType: phone.phoneType || 'mobile'
+                                      })}
+                                      data-testid={`button-edit-phone-${phone.id}`}
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="text-destructive"
+                                      onClick={() => deletePhoneMutation.mutate(phone.id)}
+                                      disabled={deletePhoneMutation.isPending}
+                                      data-testid={`button-delete-phone-${phone.id}`}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         ))}
@@ -404,24 +538,86 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       <div className="space-y-2 mt-2">
                         {details.emails.map((email) => (
                           <div key={email.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                            <div className="flex items-center space-x-3">
-                              <Mail className="w-4 h-4 text-muted-foreground" />
-                              <div>
-                                <p className="text-sm font-medium">{email.email}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {email.emailType} {email.isPrimary && '• Primary'}
-                                </p>
+                            {editingEmail?.id === email.id ? (
+                              <div className="flex-1 flex items-center space-x-2">
+                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                <Input
+                                  type="email"
+                                  value={editingEmail.email}
+                                  onChange={(e) => setEditingEmail(prev => prev ? { ...prev, email: e.target.value } : null)}
+                                  className="flex-1"
+                                  data-testid={`input-edit-email-${email.id}`}
+                                />
+                                <select 
+                                  value={editingEmail.emailType}
+                                  onChange={(e) => setEditingEmail(prev => prev ? { ...prev, emailType: e.target.value } : null)}
+                                  className="px-3 py-2 border border-input rounded-md"
+                                >
+                                  <option value="personal">Personal</option>
+                                  <option value="work">Work</option>
+                                  <option value="other">Other</option>
+                                </select>
+                                <div className="flex items-center space-x-1">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => updateEmailMutation.mutate({
+                                      emailId: email.id,
+                                      updates: { email: editingEmail.email, emailType: editingEmail.emailType }
+                                    })}
+                                    disabled={updateEmailMutation.isPending}
+                                    data-testid={`button-save-email-${email.id}`}
+                                  >
+                                    <Check className="w-3 h-3" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => setEditingEmail(null)}
+                                    data-testid={`button-cancel-email-${email.id}`}
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                            {canEdit && (
-                              <div className="flex items-center space-x-2">
-                                <Button variant="ghost" size="sm">
-                                  <Edit className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="sm" className="text-destructive">
-                                  <Trash2 className="w-3 h-3" />
-                                </Button>
-                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center space-x-3">
+                                  <Mail className="w-4 h-4 text-muted-foreground" />
+                                  <div>
+                                    <p className="text-sm font-medium">{email.email}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {email.emailType} {email.isPrimary && '• Primary'}
+                                    </p>
+                                  </div>
+                                </div>
+                                {canEdit && (
+                                  <div className="flex items-center space-x-2">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => setEditingEmail({
+                                        id: email.id,
+                                        email: email.email,
+                                        emailType: email.emailType || 'personal'
+                                      })}
+                                      data-testid={`button-edit-email-${email.id}`}
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      className="text-destructive"
+                                      onClick={() => deleteEmailMutation.mutate(email.id)}
+                                      disabled={deleteEmailMutation.isPending}
+                                      data-testid={`button-delete-email-${email.id}`}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         ))}
