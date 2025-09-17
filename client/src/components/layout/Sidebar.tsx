@@ -4,11 +4,9 @@ import { Button } from "@/components/ui/button";
 interface SidebarProps {
   user: User;
   onAdminClick?: () => void;
-  onRecentActivityClick?: () => void;
-  onSavedSearchesClick?: () => void;
 }
 
-export default function Sidebar({ user, onAdminClick, onRecentActivityClick, onSavedSearchesClick }: SidebarProps) {
+export default function Sidebar({ user, onAdminClick }: SidebarProps) {
   const handleLogout = () => {
     window.location.href = "/api/logout";
   };
@@ -48,26 +46,6 @@ export default function Sidebar({ user, onAdminClick, onRecentActivityClick, onS
               <i className="fas fa-search w-5"></i>
               <span>Search Contacts</span>
             </a>
-          </li>
-          <li>
-            <button
-              onClick={() => onRecentActivityClick?.()}
-              className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
-              data-testid="button-recent"
-            >
-              <i className="fas fa-history w-5"></i>
-              <span>Recent Activity</span>
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => onSavedSearchesClick?.()}
-              className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
-              data-testid="button-saved"
-            >
-              <i className="fas fa-bookmark w-5"></i>
-              <span>Saved Searches</span>
-            </button>
           </li>
           
           {user.role === 'admin' && (

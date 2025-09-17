@@ -31,8 +31,6 @@ export default function Home() {
       <Sidebar 
         user={user} 
         onAdminClick={() => setShowAdminDashboard(true)}
-        onRecentActivityClick={() => console.log('Recent Activity clicked')}
-        onSavedSearchesClick={() => console.log('Saved Searches clicked')}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden">
