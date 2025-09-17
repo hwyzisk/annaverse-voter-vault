@@ -30,10 +30,16 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
         limit: limit.toString(),
       });
 
-      // Add name search parameters
-      if (nameSearch.firstName.trim()) params.append('firstName', nameSearch.firstName.trim());
-      if (nameSearch.middleName.trim()) params.append('middleName', nameSearch.middleName.trim());
-      if (nameSearch.lastName.trim()) params.append('lastName', nameSearch.lastName.trim());
+      // Add name search parameters - ensure we check for valid string values
+      if (nameSearch.firstName && nameSearch.firstName.trim().length > 0) {
+        params.append('firstName', nameSearch.firstName.trim());
+      }
+      if (nameSearch.middleName && nameSearch.middleName.trim().length > 0) {
+        params.append('middleName', nameSearch.middleName.trim());
+      }
+      if (nameSearch.lastName && nameSearch.lastName.trim().length > 0) {
+        params.append('lastName', nameSearch.lastName.trim());
+      }
 
       // Add filter parameters
       if (filters.city) params.append('city', filters.city);
