@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { getPartyColor, formatParty } from "@/lib/utils";
 import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History } from "lucide-react";
 import type { Contact, User, ContactPhone, ContactEmail, ContactAlias } from "@shared/schema";
 
@@ -373,6 +374,13 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                         ) : (
                           'Not provided'
                         )}
+                      </p>
+                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Party Affiliation</Label>
+                      <p className={`text-sm mt-1 font-medium ${getPartyColor(details.party)}`} data-testid="text-party">
+                        {formatParty(details.party)}
                       </p>
                       <span className="text-xs text-muted-foreground">🔒 Locked field</span>
                     </div>

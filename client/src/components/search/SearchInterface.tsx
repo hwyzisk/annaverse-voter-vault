@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import SearchResults from "./SearchResults";
 import type { Contact } from "@shared/schema";
@@ -16,6 +17,7 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
     zipCode: "",
     ageMin: "",
     ageMax: "",
+    party: "",
   });
   const [activeQuickFilters, setActiveQuickFilters] = useState<string[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -94,7 +96,7 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
               Advanced Filters
             </summary>
             {showAdvanced && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">City</label>
                   <Input
@@ -114,6 +116,30 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
                     onChange={(e) => setAdvancedFilters(prev => ({ ...prev, zipCode: e.target.value }))}
                     data-testid="input-filter-zip"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Party</label>
+                  <Select
+                    value={advancedFilters.party}
+                    onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, party: value }))}
+                  >
+                    <SelectTrigger data-testid="select-filter-party">
+                      <SelectValue placeholder="All parties" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All parties</SelectItem>
+                      <SelectItem value="DEM">DEM - Democrat</SelectItem>
+                      <SelectItem value="REP">REP - Republican</SelectItem>
+                      <SelectItem value="NPA">NPA - No Party Affiliation</SelectItem>
+                      <SelectItem value="IND">IND - Independent</SelectItem>
+                      <SelectItem value="LPF">LPF - Libertarian Party of Florida</SelectItem>
+                      <SelectItem value="GRE">GRE - Green Party</SelectItem>
+                      <SelectItem value="CSV">CSV - Constitution Party</SelectItem>
+                      <SelectItem value="NLP">NLP - Natural Law Party</SelectItem>
+                      <SelectItem value="CPF">CPF - Communist Party</SelectItem>
+                      <SelectItem value="CPP">CPP - Christian Progressive Party</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Age Range</label>

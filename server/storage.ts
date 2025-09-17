@@ -123,6 +123,10 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(eq(contacts.zipCode, filters.zipCode));
     }
 
+    if (filters?.party) {
+      whereConditions.push(eq(contacts.party, filters.party));
+    }
+
     if (filters?.supporterStatus) {
       whereConditions.push(eq(contacts.supporterStatus, filters.supporterStatus));
     }

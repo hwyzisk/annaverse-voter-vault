@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Phone, Mail, AlertTriangle, Search } from "lucide-react";
+import { getPartyColor, formatParty } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
 
 interface SearchResultsProps {
@@ -28,6 +29,7 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
 
       if (filters.city) params.append('city', filters.city);
       if (filters.zipCode) params.append('zipCode', filters.zipCode);
+      if (filters.party) params.append('party', filters.party);
       if (filters.quickFilters?.includes('supporters')) {
         params.append('supporterStatus', 'supporter');
       }
@@ -141,6 +143,7 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
                   <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Name</th>
                   <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Age</th>
                   <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Location</th>
+                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Party</th>
                   <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Contact</th>
                   <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Last Updated</th>
                   <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Status</th>
@@ -172,6 +175,11 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
                         <p className="text-sm">{contact.city || 'N/A'}</p>
                         <p className="text-sm text-muted-foreground">{contact.zipCode || 'N/A'}</p>
                       </div>
+                    </td>
+                    <td className="px-6 py-4" data-testid={`text-party-${contact.id}`}>
+                      <span className={`text-sm font-medium ${getPartyColor(contact.party)}`}>
+                        {formatParty(contact.party)}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
