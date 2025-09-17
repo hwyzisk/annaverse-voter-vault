@@ -50,9 +50,9 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
           <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="relative p-2 h-10 w-10 text-foreground hover:bg-accent border border-border/50"
+                className="relative p-2 h-10 w-10"
                 data-testid="button-notifications"
                 onClick={() => onNotificationClick?.()}
               >
@@ -78,9 +78,9 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
           
           {/* Help Button with better visibility */}
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="p-2 h-10 w-10 text-foreground hover:bg-accent border border-border/50"
+            className="p-2 h-10 w-10"
             data-testid="button-help"
             title="Help & Documentation"
           >
@@ -91,8 +91,8 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="ghost"
-                className="h-10 px-3 text-foreground hover:bg-accent border border-border/50"
+                variant="outline"
+                className="h-10 px-3"
                 data-testid="button-profile"
               >
                 <div className="flex items-center space-x-2">
@@ -102,14 +102,9 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
                       {getInitials(user)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium leading-none">
-                      {formatName(user)}
-                    </span>
-                    <Badge variant="secondary" className="text-xs mt-1">
-                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
-                    </Badge>
-                  </div>
+                  <Badge variant="secondary" className="text-xs">
+                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                  </Badge>
                   <i className="fas fa-chevron-down text-xs text-muted-foreground"></i>
                 </div>
               </Button>
