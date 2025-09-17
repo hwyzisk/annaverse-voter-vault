@@ -314,6 +314,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/admin/users', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const userData = z.object({
+        email: z.string().email(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        role: z.enum(['admin', 'editor', 'viewer']).optional()
+      }).parse(req.body);
+
+      const user = await storage.createUser(userData);
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.delete('/api/admin/users/:id', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      await storage.deleteUser(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   app.get('/api/admin/stats', isAuthenticated, requireRole(['admin']), async (req, res) => {
     try {
       const stats = await storage.getSystemStats();

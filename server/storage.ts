@@ -57,6 +57,8 @@ export interface IStorage {
   
   // Admin operations
   getAllUsers(): Promise<User[]>;
+  createUser(userData: { email: string; firstName?: string; lastName?: string; role?: string }): Promise<User>;
+  deleteUser(userId: string): Promise<void>;
   updateUserRole(userId: string, role: string): Promise<User>;
   updateUserStatus(userId: string, isActive: boolean): Promise<User>;
   getSystemStats(): Promise<any>;
@@ -301,6 +303,26 @@ export class DatabaseStorage implements IStorage {
   // Admin operations
   async getAllUsers(): Promise<User[]> {
     return await db.select().from(users).orderBy(users.firstName, users.lastName);
+  }
+
+  async createUser(userData: { email: string; firstName?: string; lastName?: string; role?: string }): Promise<User> {
+    const [newUser] = await db
+      .insert(users)
+      .values({
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: (userData.role as any) || 'viewer',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning();
+    return newUser;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, userId));
   }
 
   async updateUserRole(userId: string, role: string): Promise<User> {
