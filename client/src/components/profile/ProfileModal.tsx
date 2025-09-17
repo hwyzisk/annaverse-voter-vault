@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo } from "lucide-react";
+import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History } from "lucide-react";
 import type { Contact, User, ContactPhone, ContactEmail, ContactAlias } from "@shared/schema";
 
 interface ProfileModalProps {
@@ -236,7 +236,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
@@ -267,7 +267,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   onClick={onClose}
                   data-testid="button-close-profile"
                 >
-                  <i className="fas fa-arrow-left"></i>
+                  <ArrowLeft className="w-4 h-4" />
                 </Button>
                 <div>
                   <h2 className="text-xl font-bold" data-testid="text-contact-name">
@@ -287,7 +287,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   size="sm"
                   data-testid="button-export"
                 >
-                  <i className="fas fa-download mr-2"></i>Export
+                  <Download className="w-4 h-4 mr-2" />Export
                 </Button>
                 {canEdit && (
                   <Button
@@ -295,7 +295,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     onClick={() => setIsEditing(!isEditing)}
                     data-testid="button-edit"
                   >
-                    <i className="fas fa-edit mr-2"></i>
+                    <Edit className="w-4 h-4 mr-2" />
                     {isEditing ? 'Cancel' : 'Edit'}
                   </Button>
                 )}
@@ -305,11 +305,55 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
 
           {/* Profile Content */}
           <div className="flex-1 overflow-auto p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Identity & Contact */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Identity Information */}
-                <Card>
+            <div className="space-y-6">
+              {/* Supporter Status - Moved to Top */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Supporter Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {canEdit && isEditing ? (
+                    <RadioGroup 
+                      value={supporterStatus}
+                      onValueChange={(value) => setSupporterStatus(value as any)}
+                      className="flex flex-row space-x-6"
+                      data-testid="radio-supporter-status"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="supporter" id="supporter" />
+                        <label htmlFor="supporter" className="text-sm font-medium leading-none">
+                          Supporter
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="non-supporter" id="non-supporter" />
+                        <label htmlFor="non-supporter" className="text-sm font-medium leading-none">
+                          Non-Supporter
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="unknown" id="unknown" />
+                        <label htmlFor="unknown" className="text-sm font-medium leading-none">
+                          Unknown
+                        </label>
+                      </div>
+                    </RadioGroup>
+                  ) : (
+                    <Badge 
+                      variant={
+                        details.supporterStatus === 'supporter' ? 'default' : 
+                        details.supporterStatus === 'non-supporter' ? 'destructive' : 'secondary'
+                      }
+                      data-testid="badge-supporter-status"
+                    >
+                      {details.supporterStatus === 'supporter' ? 'Supporter' : 
+                       details.supporterStatus === 'non-supporter' ? 'Non-Supporter' : 'Unknown'}
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+              {/* Identity Information */}
+              <Card>
                   <CardHeader>
                     <CardTitle>Identity Information</CardTitle>
                   </CardHeader>
@@ -340,7 +384,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             {alias.alias}
                             {canEdit && (
                               <button className="ml-1 text-muted-foreground hover:text-foreground">
-                                <i className="fas fa-times text-xs"></i>
+                                <X className="w-3 h-3" />
                               </button>
                             )}
                           </Badge>
@@ -361,7 +405,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             disabled={!newAlias || addAliasMutation.isPending}
                             data-testid="button-add-alias"
                           >
-                            <i className="fas fa-plus"></i>
+                            <Plus className="w-4 h-4" />
                           </Button>
                         </div>
                       )}
@@ -681,54 +725,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     )}
                   </CardContent>
                 </Card>
-              </div>
-
-              {/* Right Column - Activity & Status */}
-              <div className="space-y-6">
-                {/* Supporter Status */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Supporter Status</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {isEditing && canEdit ? (
-                      <RadioGroup
-                        value={supporterStatus}
-                        onValueChange={(value: string) => setSupporterStatus(value as "supporter" | "non-supporter" | "unknown")}
-                        data-testid="radio-supporter-status"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="supporter" id="supporter" />
-                          <Label htmlFor="supporter" className="text-green-700">Supporter</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="non-supporter" id="nonsupporter" />
-                          <Label htmlFor="nonsupporter" className="text-red-700">Non-Supporter</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="unknown" id="unknown" />
-                          <Label htmlFor="unknown" className="text-gray-700">Unknown</Label>
-                        </div>
-                      </RadioGroup>
-                    ) : (
-                      <Badge
-                        className={
-                          details.supporterStatus === 'supporter'
-                            ? 'bg-green-100 text-green-800'
-                            : details.supporterStatus === 'non-supporter'
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }
-                      >
-                        {details.supporterStatus === 'supporter'
-                          ? 'Supporter'
-                          : details.supporterStatus === 'non-supporter'
-                          ? 'Non-Supporter'
-                          : 'Unknown'}
-                      </Badge>
-                    )}
-                  </CardContent>
-                </Card>
 
                 {/* Activity Timeline */}
                 <Card>
@@ -743,7 +739,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                         details.auditLogs.map((log: any) => (
                           <div key={log.id} className="flex space-x-3 pb-4 border-b border-border last:border-b-0 last:pb-0">
                             <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <i className="fas fa-edit text-primary text-xs"></i>
+                              <History className="w-3 h-3 text-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm">
@@ -768,7 +764,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                 size="sm"
                                 className="text-destructive hover:text-destructive"
                               >
-                                <i className="fas fa-undo text-xs"></i>
+                                <Undo className="w-3 h-3" />
                               </Button>
                             )}
                           </div>
@@ -791,7 +787,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     </Button>
                   </div>
                 )}
-              </div>
             </div>
           </div>
         </div>

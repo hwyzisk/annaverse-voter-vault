@@ -127,16 +127,101 @@ export class DatabaseStorage implements IStorage {
       whereConditions.push(eq(contacts.supporterStatus, filters.supporterStatus));
     }
 
+    // Age range filtering
+    if (filters?.minAge || filters?.maxAge) {
+      if (filters.minAge && filters.maxAge) {
+        // Filter for ages between minAge and maxAge
+        whereConditions.push(
+          sql`EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) BETWEEN ${filters.minAge} AND ${filters.maxAge}`
+        );
+      } else if (filters.minAge) {
+        // Filter for ages >= minAge
+        whereConditions.push(
+          sql`EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) >= ${filters.minAge}`
+        );
+      } else if (filters.maxAge) {
+        // Filter for ages <= maxAge
+        whereConditions.push(
+          sql`EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) <= ${filters.maxAge}`
+        );
+      }
+    }
+
+    // Phone and email filtering
+    if (filters?.missingPhone) {
+      whereConditions.push(
+        sql`NOT EXISTS (SELECT 1 FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`
+      );
+    }
+
+    if (filters?.hasEmail) {
+      whereConditions.push(
+        sql`EXISTS (SELECT 1 FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`
+      );
+    }
+
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
     const [contactsResult, totalResult] = await Promise.all([
       whereClause 
-        ? db.select().from(contacts)
+        ? db.select({
+            id: contacts.id,
+            systemId: contacts.systemId,
+            fullName: contacts.fullName,
+            firstName: contacts.firstName,
+            middleName: contacts.middleName,
+            lastName: contacts.lastName,
+            dateOfBirth: contacts.dateOfBirth,
+            streetAddress: contacts.streetAddress,
+            city: contacts.city,
+            state: contacts.state,
+            zipCode: contacts.zipCode,
+            district: contacts.district,
+            precinct: contacts.precinct,
+            voterIdRedacted: contacts.voterIdRedacted,
+            registrationDate: contacts.registrationDate,
+            party: contacts.party,
+            voterStatus: contacts.voterStatus,
+            supporterStatus: contacts.supporterStatus,
+            notes: contacts.notes,
+            createdAt: contacts.createdAt,
+            updatedAt: contacts.updatedAt,
+            createdBy: contacts.createdBy,
+            lastUpdatedBy: contacts.lastUpdatedBy,
+            phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
+            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`
+          }).from(contacts)
             .where(whereClause)
             .limit(limit)
             .offset(offset)
             .orderBy(desc(contacts.updatedAt))
-        : db.select().from(contacts)
+        : db.select({
+            id: contacts.id,
+            systemId: contacts.systemId,
+            fullName: contacts.fullName,
+            firstName: contacts.firstName,
+            middleName: contacts.middleName,
+            lastName: contacts.lastName,
+            dateOfBirth: contacts.dateOfBirth,
+            streetAddress: contacts.streetAddress,
+            city: contacts.city,
+            state: contacts.state,
+            zipCode: contacts.zipCode,
+            district: contacts.district,
+            precinct: contacts.precinct,
+            voterIdRedacted: contacts.voterIdRedacted,
+            registrationDate: contacts.registrationDate,
+            party: contacts.party,
+            voterStatus: contacts.voterStatus,
+            supporterStatus: contacts.supporterStatus,
+            notes: contacts.notes,
+            createdAt: contacts.createdAt,
+            updatedAt: contacts.updatedAt,
+            createdBy: contacts.createdBy,
+            lastUpdatedBy: contacts.lastUpdatedBy,
+            phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
+            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`
+          }).from(contacts)
             .limit(limit)
             .offset(offset)
             .orderBy(desc(contacts.updatedAt)),

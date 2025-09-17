@@ -31,6 +31,16 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
       if (filters.quickFilters?.includes('supporters')) {
         params.append('supporterStatus', 'supporter');
       }
+      if (filters.quickFilters?.includes('missing-phone')) {
+        params.append('missingPhone', 'true');
+      }
+      if (filters.quickFilters?.includes('has-email')) {
+        params.append('hasEmail', 'true');
+      }
+      if (filters.quickFilters?.includes('age-18-25')) {
+        params.append('minAge', '18');
+        params.append('maxAge', '25');
+      }
 
       const response = await fetch(`/api/contacts/search?${params}`);
       if (!response.ok) throw new Error('Search failed');
@@ -165,8 +175,16 @@ export default function SearchResults({ searchQuery, filters, onContactSelect }:
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
-                        <Phone className="w-3 h-3 text-green-600" />
-                        <Mail className="w-3 h-3 text-blue-600" />
+                        {(contact as any).phoneCount > 0 ? (
+                          <Phone className="w-3 h-3 text-green-600" />
+                        ) : (
+                          <Phone className="w-3 h-3 text-gray-300" />
+                        )}
+                        {(contact as any).emailCount > 0 ? (
+                          <Mail className="w-3 h-3 text-blue-600" />
+                        ) : (
+                          <Mail className="w-3 h-3 text-gray-300" />
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-muted-foreground">
