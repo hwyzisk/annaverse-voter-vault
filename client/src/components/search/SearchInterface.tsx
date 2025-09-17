@@ -160,7 +160,7 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
                       <SelectValue placeholder="All parties" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All parties</SelectItem>
+                      <SelectItem value="all">All parties</SelectItem>
                       <SelectItem value="DEM">DEM - Democrat</SelectItem>
                       <SelectItem value="REP">REP - Republican</SelectItem>
                       <SelectItem value="NPA">NPA - No Party Affiliation</SelectItem>

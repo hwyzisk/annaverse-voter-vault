@@ -44,7 +44,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
       // Add filter parameters
       if (filters.city) params.append('city', filters.city);
       if (filters.zipCode) params.append('zipCode', filters.zipCode);
-      if (filters.party) params.append('party', filters.party);
+      if (filters.party && filters.party !== 'all') params.append('party', filters.party);
       if (filters.quickFilters?.includes('supporters')) {
         params.append('supporterStatus', 'supporter');
       }
