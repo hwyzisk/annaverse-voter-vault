@@ -296,9 +296,10 @@ class ExcelService {
 
   private async findExistingVoterContact(hashedVoterId: string): Promise<any> {
     try {
-      // Search by systemId which contains the hash prefix
+      // Search by systemId which contains the hash prefix  
       const systemIdPrefix = `VV-${hashedVoterId.substring(0, 8)}`;
-      const result = await storage.searchContacts(systemIdPrefix, {}, 1, 0);
+      // Use empty nameFilters since we're searching by system ID through other filters
+      const result = await storage.searchContacts({}, { systemId: systemIdPrefix }, 1, 0);
       return result.contacts.length > 0 ? result.contacts[0] : null;
     } catch (error) {
       console.error('Error checking for existing voter:', error);

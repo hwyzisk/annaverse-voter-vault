@@ -31,7 +31,7 @@ export interface IStorage {
   // Contact operations
   getContact(id: string): Promise<Contact | undefined>;
   getContactBySystemId(systemId: string): Promise<Contact | undefined>;
-  searchContacts(query: string, filters?: any, limit?: number, offset?: number): Promise<{ contacts: Contact[], total: number }>;
+  searchContacts(nameFilters?: { firstName?: string; middleName?: string; lastName?: string; }, filters?: any, limit?: number, offset?: number): Promise<{ contacts: Contact[], total: number }>;
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: string, updates: UpdateContact, userId: string): Promise<Contact>;
   
@@ -102,17 +102,32 @@ export class DatabaseStorage implements IStorage {
     return contact;
   }
 
-  async searchContacts(query: string, filters?: any, limit = 20, offset = 0): Promise<{ contacts: Contact[], total: number }> {
+  async searchContacts(
+    nameFilters: { firstName?: string; middleName?: string; lastName?: string; } = {}, 
+    filters?: any, 
+    limit = 20, 
+    offset = 0
+  ): Promise<{ contacts: Contact[], total: number }> {
     let whereConditions = [];
     
-    if (query) {
-      whereConditions.push(
-        or(
-          ilike(contacts.fullName, `%${query}%`),
-          ilike(contacts.firstName, `%${query}%`),
-          ilike(contacts.lastName, `%${query}%`)
-        )
-      );
+    // Handle individual name field searches
+    const nameConditions = [];
+    
+    if (nameFilters.firstName?.trim()) {
+      nameConditions.push(ilike(contacts.firstName, `%${nameFilters.firstName.trim()}%`));
+    }
+    
+    if (nameFilters.middleName?.trim()) {
+      nameConditions.push(ilike(contacts.middleName, `%${nameFilters.middleName.trim()}%`));
+    }
+    
+    if (nameFilters.lastName?.trim()) {
+      nameConditions.push(ilike(contacts.lastName, `%${nameFilters.lastName.trim()}%`));
+    }
+    
+    // If any name filters are provided, add them as AND conditions (all must match)
+    if (nameConditions.length > 0) {
+      whereConditions.push(and(...nameConditions));
     }
 
     if (filters?.city) {

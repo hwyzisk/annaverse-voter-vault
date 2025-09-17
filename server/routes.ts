@@ -108,8 +108,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Contacts endpoints
   app.get('/api/contacts/search', isAuthenticated, async (req: any, res) => {
     try {
-      const { q, city, zipCode, party, supporterStatus, missingPhone, hasEmail, minAge, maxAge, page = 1, limit = 20 } = req.query;
+      const { firstName, middleName, lastName, city, zipCode, party, supporterStatus, missingPhone, hasEmail, minAge, maxAge, page = 1, limit = 20 } = req.query;
       const offset = (parseInt(page) - 1) * parseInt(limit);
+
+      const nameFilters = {
+        firstName: firstName || undefined,
+        middleName: middleName || undefined,
+        lastName: lastName || undefined,
+      };
 
       const filters = {
         city: city || undefined,
@@ -123,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const result = await searchService.searchContacts(
-        q || '', 
+        nameFilters, 
         filters, 
         parseInt(limit), 
         offset

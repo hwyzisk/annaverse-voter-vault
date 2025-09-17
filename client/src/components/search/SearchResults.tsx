@@ -9,24 +9,33 @@ import { getPartyColor, formatParty } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
 
 interface SearchResultsProps {
-  searchQuery: string;
+  nameSearch: {
+    firstName: string;
+    middleName: string;
+    lastName: string;
+  };
   filters: any;
   onContactSelect: (contact: Contact) => void;
 }
 
-export default function SearchResults({ searchQuery, filters, onContactSelect }: SearchResultsProps) {
+export default function SearchResults({ nameSearch, filters, onContactSelect }: SearchResultsProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 20;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['/api/contacts/search', searchQuery, filters, currentPage],
+    queryKey: ['/api/contacts/search', nameSearch, filters, currentPage],
     queryFn: async () => {
       const params = new URLSearchParams({
-        q: searchQuery,
         page: currentPage.toString(),
         limit: limit.toString(),
       });
 
+      // Add name search parameters
+      if (nameSearch.firstName.trim()) params.append('firstName', nameSearch.firstName.trim());
+      if (nameSearch.middleName.trim()) params.append('middleName', nameSearch.middleName.trim());
+      if (nameSearch.lastName.trim()) params.append('lastName', nameSearch.lastName.trim());
+
+      // Add filter parameters
       if (filters.city) params.append('city', filters.city);
       if (filters.zipCode) params.append('zipCode', filters.zipCode);
       if (filters.party) params.append('party', filters.party);

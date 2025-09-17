@@ -32,20 +32,17 @@ const NICKNAME_MAPPINGS: Record<string, string[]> = {
   'kate': ['catherine', 'cathy', 'katie'],
 };
 
-function expandQueryWithNicknames(query: string): string[] {
-  const words = query.toLowerCase().split(' ');
-  const expandedQueries = [query];
+function expandNameWithNicknames(name: string): string[] {
+  const nameLower = name.toLowerCase().trim();
+  const expandedNames = [nameLower];
 
-  words.forEach(word => {
-    if (NICKNAME_MAPPINGS[word]) {
-      NICKNAME_MAPPINGS[word].forEach(nickname => {
-        const expandedQuery = query.toLowerCase().replace(word, nickname);
-        expandedQueries.push(expandedQuery);
-      });
-    }
-  });
+  if (NICKNAME_MAPPINGS[nameLower]) {
+    NICKNAME_MAPPINGS[nameLower].forEach(nickname => {
+      expandedNames.push(nickname);
+    });
+  }
 
-  return expandedQueries;
+  return expandedNames;
 }
 
 function parseNameQuery(query: string): { 
@@ -77,43 +74,56 @@ function parseNameQuery(query: string): {
 
 class SearchService {
   async searchContacts(
-    query: string, 
+    nameFilters: { firstName?: string; middleName?: string; lastName?: string; } = {}, 
     filters: any = {}, 
     limit = 20, 
     offset = 0
   ): Promise<{ contacts: Contact[], total: number }> {
     
-    // If no query, use basic database search with filters
-    if (!query.trim()) {
-      return await storage.searchContacts('', filters, limit, offset);
+    // Check if any name filters are provided
+    const hasNameFilters = Boolean(
+      nameFilters.firstName?.trim() || 
+      nameFilters.middleName?.trim() || 
+      nameFilters.lastName?.trim()
+    );
+    
+    // If no name filters, use basic database search with filters
+    if (!hasNameFilters) {
+      return await storage.searchContacts(nameFilters, filters, limit, offset);
     }
 
     // Get a larger set for fuzzy matching
-    const dbResult = await storage.searchContacts(query, filters, limit * 5, 0);
+    const dbResult = await storage.searchContacts(nameFilters, filters, limit * 5, 0);
     
     if (dbResult.contacts.length === 0) {
       return { contacts: [], total: 0 };
     }
 
-    // Setup Fuse.js for fuzzy searching
+    // Setup Fuse.js for fuzzy searching with individual name field weights
     const fuse = new Fuse(dbResult.contacts, {
       keys: [
-        { name: 'fullName', weight: 0.4 },
-        { name: 'firstName', weight: 0.3 },
-        { name: 'lastName', weight: 0.3 },
+        { name: 'firstName', weight: 0.4 },
+        { name: 'middleName', weight: 0.2 },
+        { name: 'lastName', weight: 0.4 },
       ],
       threshold: 0.4, // Adjust for typo tolerance
       includeScore: true,
       ignoreLocation: true,
     });
 
-    // Generate expanded queries with nicknames
-    const expandedQueries = expandQueryWithNicknames(query);
     const allResults = new Map<string, any>();
 
-    // Search with each expanded query
-    expandedQueries.forEach(expandedQuery => {
-      const results = fuse.search(expandedQuery);
+    // Generate expanded search terms with nicknames for each name field
+    const expandedFirstNames = nameFilters.firstName?.trim() ? 
+      expandNameWithNicknames(nameFilters.firstName) : [];
+    const expandedMiddleNames = nameFilters.middleName?.trim() ? 
+      [nameFilters.middleName.toLowerCase().trim()] : [];
+    const expandedLastNames = nameFilters.lastName?.trim() ? 
+      expandNameWithNicknames(nameFilters.lastName) : [];
+
+    // Search with expanded first names
+    expandedFirstNames.forEach(firstName => {
+      const results = fuse.search(firstName);
       results.forEach(result => {
         if (!allResults.has(result.item.id)) {
           allResults.set(result.item.id, result);
@@ -121,34 +131,37 @@ class SearchService {
       });
     });
 
-    // Handle initial matching (e.g., "D Smith" should match "David Smith")
-    const { firstNames, lastNames, initials } = parseNameQuery(query);
-    
-    if (initials.length > 0) {
+    // Search with middle names
+    expandedMiddleNames.forEach(middleName => {
+      const results = fuse.search(middleName);
+      results.forEach(result => {
+        if (!allResults.has(result.item.id)) {
+          allResults.set(result.item.id, result);
+        }
+      });
+    });
+
+    // Search with expanded last names
+    expandedLastNames.forEach(lastName => {
+      const results = fuse.search(lastName);
+      results.forEach(result => {
+        if (!allResults.has(result.item.id)) {
+          allResults.set(result.item.id, result);
+        }
+      });
+    });
+
+    // Handle initial matching for first names (e.g., "D" should match "David")
+    if (nameFilters.firstName?.trim() && nameFilters.firstName.length === 1) {
+      const initial = nameFilters.firstName.toLowerCase();
       dbResult.contacts.forEach(contact => {
-        let matches = true;
-        
-        // Check if initials match
-        if (initials.length > 0 && contact.firstName) {
-          const firstInitial = contact.firstName.charAt(0).toLowerCase();
-          if (!initials.some(initial => initial.toLowerCase() === firstInitial)) {
-            matches = false;
+        if (contact.firstName && contact.firstName.charAt(0).toLowerCase() === initial) {
+          if (!allResults.has(contact.id)) {
+            allResults.set(contact.id, { 
+              item: contact, 
+              score: 0.2 // Lower score for initial matches
+            });
           }
-        }
-
-        // Check last names
-        if (lastNames.length > 0 && contact.lastName) {
-          const lastName = contact.lastName.toLowerCase();
-          if (!lastNames.some(ln => lastName.includes(ln.toLowerCase()))) {
-            matches = false;
-          }
-        }
-
-        if (matches && !allResults.has(contact.id)) {
-          allResults.set(contact.id, { 
-            item: contact, 
-            score: 0.2 // Lower score for initial matches
-          });
         }
       });
     }
@@ -178,9 +191,9 @@ class SearchService {
   }): Promise<{ contacts: Contact[], total: number }> {
     
     // This would be a more complex query with age calculations, etc.
-    // For now, delegate to the basic search
+    // For now, delegate to the basic search with empty nameFilters
     return await storage.searchContacts(
-      filters.name || '', 
+      {}, 
       {
         city: filters.city,
         zipCode: filters.zipCode,

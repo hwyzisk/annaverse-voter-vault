@@ -11,7 +11,11 @@ interface SearchInterfaceProps {
 }
 
 export default function SearchInterface({ onContactSelect }: SearchInterfaceProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [nameSearch, setNameSearch] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: ""
+  });
   const [advancedFilters, setAdvancedFilters] = useState({
     city: "",
     zipCode: "",
@@ -38,7 +42,11 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
   };
 
   const clearSearch = () => {
-    setSearchQuery("");
+    setNameSearch({
+      firstName: "",
+      middleName: "",
+      lastName: ""
+    });
   };
 
   return (
@@ -46,29 +54,54 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
       {/* Search Bar and Filters */}
       <Card className="mb-6">
         <CardContent className="p-6 space-y-4">
-          {/* Main Search Input */}
-          <div className="relative">
-            <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"></i>
-            <Input
-              type="text"
-              placeholder="Search by name, nickname, or initials..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-12"
-              data-testid="input-search"
-            />
-            {searchQuery && (
+          {/* Name Search Inputs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">First Name</label>
+              <Input
+                type="text"
+                placeholder="John"
+                value={nameSearch.firstName}
+                onChange={(e) => setNameSearch(prev => ({ ...prev, firstName: e.target.value }))}
+                data-testid="input-first-name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Middle Name</label>
+              <Input
+                type="text"
+                placeholder="Michael"
+                value={nameSearch.middleName}
+                onChange={(e) => setNameSearch(prev => ({ ...prev, middleName: e.target.value }))}
+                data-testid="input-middle-name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Last Name</label>
+              <Input
+                type="text"
+                placeholder="Smith"
+                value={nameSearch.lastName}
+                onChange={(e) => setNameSearch(prev => ({ ...prev, lastName: e.target.value }))}
+                data-testid="input-last-name"
+              />
+            </div>
+          </div>
+          
+          {/* Clear Search Button */}
+          {(nameSearch.firstName || nameSearch.middleName || nameSearch.lastName) && (
+            <div className="flex justify-end">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={clearSearch}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1"
                 data-testid="button-clear-search"
               >
-                <i className="fas fa-times text-muted-foreground"></i>
+                <i className="fas fa-times mr-2"></i>
+                Clear Names
               </Button>
-            )}
-          </div>
+            </div>
+          )}
           
           {/* Quick Filters */}
           <div className="flex flex-wrap gap-2">
@@ -169,7 +202,7 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
 
       {/* Search Results */}
       <SearchResults 
-        searchQuery={searchQuery}
+        nameSearch={nameSearch}
         filters={{ ...advancedFilters, quickFilters: activeQuickFilters }}
         onContactSelect={onContactSelect}
       />
