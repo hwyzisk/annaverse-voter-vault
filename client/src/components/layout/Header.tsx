@@ -1,11 +1,41 @@
+import { useState } from "react";
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 interface HeaderProps {
   user: User;
+  onProfileClick?: () => void;
+  onNotificationClick?: () => void;
 }
 
-export default function Header({ user }: HeaderProps) {
+export default function Header({ user, onProfileClick, onNotificationClick }: HeaderProps) {
+  const [showNotifications, setShowNotifications] = useState(false);
+  
+  const formatName = (user: User) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user.firstName) return user.firstName;
+    if (user.email) return user.email.split('@')[0];
+    return "User";
+  };
+  
+  const getInitials = (user: User) => {
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`;
+    }
+    if (user.firstName) return user.firstName[0];
+    if (user.email) return user.email[0].toUpperCase();
+    return "U";
+  };
+  
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+  
   return (
     <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
@@ -16,23 +46,108 @@ export default function Header({ user }: HeaderProps) {
           </span>
         </div>
         <div className="flex items-center space-x-3">
+          {/* Notifications with better visibility */}
+          <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative p-2 h-10 w-10 text-foreground hover:bg-accent border border-border/50"
+                data-testid="button-notifications"
+                onClick={() => onNotificationClick?.()}
+              >
+                <i className="fas fa-bell text-lg"></i>
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center font-medium">
+                  3
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <div className="p-3 border-b">
+                <p className="font-medium">Notifications</p>
+                <p className="text-sm text-muted-foreground">You have 3 unread notifications</p>
+              </div>
+              <div className="p-2">
+                <div className="p-3 text-sm text-muted-foreground text-center">
+                  <i className="fas fa-bell-slash text-2xl mb-2 opacity-50"></i>
+                  <p>No new notifications</p>
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          {/* Help Button with better visibility */}
           <Button
             variant="ghost"
             size="sm"
-            className="relative p-2 text-muted-foreground hover:text-foreground"
-            data-testid="button-notifications"
-          >
-            <i className="fas fa-bell"></i>
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full"></span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-2 text-muted-foreground hover:text-foreground"
+            className="p-2 h-10 w-10 text-foreground hover:bg-accent border border-border/50"
             data-testid="button-help"
+            title="Help & Documentation"
           >
-            <i className="fas fa-question-circle"></i>
+            <i className="fas fa-question-circle text-lg"></i>
           </Button>
+          
+          {/* User Profile Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-10 px-3 text-foreground hover:bg-accent border border-border/50"
+                data-testid="button-profile"
+              >
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={user.profileImageUrl || undefined} />
+                    <AvatarFallback className="text-sm font-medium">
+                      {getInitials(user)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start">
+                    <span className="text-sm font-medium leading-none">
+                      {formatName(user)}
+                    </span>
+                    <Badge variant="secondary" className="text-xs mt-1">
+                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </Badge>
+                  </div>
+                  <i className="fas fa-chevron-down text-xs text-muted-foreground"></i>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              <div className="p-3">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={user.profileImageUrl || undefined} />
+                    <AvatarFallback className="font-medium">
+                      {getInitials(user)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium leading-none">{formatName(user)}</p>
+                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <Badge variant="secondary" className="text-xs">
+                      {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onProfileClick?.()}>
+                <i className="fas fa-user mr-2 w-4"></i>
+                View Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <i className="fas fa-cog mr-2 w-4"></i>
+                Account Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <i className="fas fa-sign-out-alt mr-2 w-4"></i>
+                Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

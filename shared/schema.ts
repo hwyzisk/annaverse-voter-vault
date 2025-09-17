@@ -54,10 +54,16 @@ export const contacts = pgTable("contacts", {
   zipCode: text("zip_code"),
   district: text("district"),
   precinct: text("precinct"),
+  // Voter-specific fields
+  voterIdRedacted: varchar("voter_id_redacted"), // For privacy compliance
+  registrationDate: date("registration_date"),
+  party: varchar("party"),
+  voterStatus: varchar("voter_status"),
   supporterStatus: varchar("supporter_status", { enum: ['supporter', 'non-supporter', 'unknown'] }).default('unknown'),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
   lastUpdatedBy: varchar("last_updated_by").references(() => users.id),
 });
 

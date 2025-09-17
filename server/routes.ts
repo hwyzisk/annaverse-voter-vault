@@ -3,8 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { searchService } from "./services/searchService";
-// Excel and audit services will be imported when needed
-// import { excelService } from "./services/excelService";
+import { excelService } from "./services/excelService";
 // import { auditService } from "./services/auditService";
 import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactAliasSchema } from "@shared/schema";
 import { z } from "zod";
@@ -341,8 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Excel file required" });
       }
 
-      // Excel service functionality to be implemented
-      const result = { processed: 0, errors: ["Excel import not yet implemented"], summary: { totalRows: 0, successfullyProcessed: 0, duplicates: 0, errors: 1 } };
+      const result = await excelService.processExcelFile(req.file.buffer, req.currentUser.id);
       res.json(result);
     } catch (error) {
       console.error("Error processing Excel file:", error);

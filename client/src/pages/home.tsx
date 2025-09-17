@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import SearchInterface from "@/components/search/SearchInterface";
 import ProfileModal from "@/components/profile/ProfileModal";
+import UserProfileModal from "@/components/profile/UserProfileModal";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import type { Contact } from "@shared/schema";
 
@@ -11,6 +12,8 @@ export default function Home() {
   const { user, isLoading } = useAuth();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   if (isLoading || !user) {
     return (
@@ -28,10 +31,16 @@ export default function Home() {
       <Sidebar 
         user={user} 
         onAdminClick={() => setShowAdminDashboard(true)}
+        onRecentActivityClick={() => console.log('Recent Activity clicked')}
+        onSavedSearchesClick={() => console.log('Saved Searches clicked')}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden">
-        <Header user={user} />
+        <Header 
+          user={user} 
+          onProfileClick={() => setShowUserProfile(true)}
+          onNotificationClick={() => setShowNotifications(true)}
+        />
         
         <div className="flex-1 overflow-auto">
           <SearchInterface onContactSelect={setSelectedContact} />
@@ -47,6 +56,14 @@ export default function Home() {
         />
       )}
 
+      {showUserProfile && (
+        <UserProfileModal
+          user={user}
+          isOpen={true}
+          onClose={() => setShowUserProfile(false)}
+        />
+      )}
+      
       {showAdminDashboard && user.role === 'admin' && (
         <AdminDashboard
           isOpen={true}

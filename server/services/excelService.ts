@@ -1,8 +1,32 @@
 import * as XLSX from 'xlsx';
 import { storage } from '../storage';
-import type { InsertContact } from '@shared/schema';
+import { nanoid } from 'nanoid';
+import type { InsertContact, InsertContactPhone, InsertContactAlias } from '@shared/schema';
 
-interface ExcelRow {
+interface VoterExcelRow {
+  VoterID: string | number;
+  Voter_Name?: string;
+  Last_Name?: string;
+  First_Name?: string;
+  Middle_Name?: string;
+  Formatted_Address?: string;
+  City_State?: string;
+  Zip_Country?: string | number;
+  City_Name?: string;
+  Zip_Code?: string | number;
+  Birth_Date?: string | number;
+  Registration_Date?: string | number;
+  Race?: string | number;
+  Sex?: string;
+  Party?: string;
+  Telephone_Number?: string;
+  Voter_Status?: string;
+  Congressional_District?: string | number;
+  House_District?: string | number;
+  Senate_District?: string | number;
+  Commission_District?: string | number;
+  School_Board_District?: string | number;
+  Precinct?: string;
   [key: string]: any;
 }
 
@@ -17,7 +41,7 @@ class ExcelService {
     const worksheet = workbook.Sheets[sheetName];
     
     // Convert to JSON
-    const rawData: ExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
+    const rawData: VoterExcelRow[] = XLSX.utils.sheet_to_json(worksheet);
     
     const errors: string[] = [];
     let processed = 0;
@@ -28,10 +52,27 @@ class ExcelService {
       errors: 0,
     };
 
+    console.log(`Processing ${rawData.length} voter records from Excel file`);
+    const processedVoterIds = new Set<string>();
+
     for (let i = 0; i < rawData.length; i++) {
       try {
         const row = rawData[i];
-        const normalizedContact = this.normalizeContactData(row, i + 2); // +2 because Excel is 1-indexed and we skip header
+        const voterIdStr = String(row.VoterID || '').trim();
+        
+        // Skip empty rows or header row
+        if (!voterIdStr || voterIdStr === 'VoterID') {
+          continue;
+        }
+        
+        // Check for duplicates within the file
+        if (processedVoterIds.has(voterIdStr)) {
+          errors.push(`Row ${i + 2}: Duplicate VoterID ${voterIdStr} in file`);
+          summary.duplicates++;
+          continue;
+        }
+        
+        const normalizedContact = this.normalizeVoterData(row, i + 2);
         
         if (!normalizedContact) {
           errors.push(`Row ${i + 2}: Invalid data format`);
@@ -39,10 +80,10 @@ class ExcelService {
           continue;
         }
 
-        // Check for duplicates by name and DOB
-        const existing = await this.findDuplicateContact(normalizedContact);
+        // Check for existing contact in database by voter ID
+        const existing = await this.findExistingVoterContact(voterIdStr);
         if (existing) {
-          errors.push(`Row ${i + 2}: Duplicate contact found - ${normalizedContact.fullName}`);
+          errors.push(`Row ${i + 2}: Voter ${voterIdStr} already exists in database`);
           summary.duplicates++;
           continue;
         }
@@ -53,93 +94,113 @@ class ExcelService {
           lastUpdatedBy: userId,
         });
 
-        // Log audit
-        await storage.logAudit({
-          contactId: contact.id,
-          userId: userId,
-          action: 'create',
-          tableName: 'contacts',
-          recordId: contact.id,
-          fieldName: null,
-          oldValue: null,
-          newValue: JSON.stringify(normalizedContact),
-          metadata: { source: 'excel_import', row: i + 2 }
-        });
-
+        // Store related data (phones, aliases)
+        await this.storeRelatedVoterData(contact.id, row, userId);
+        
+        processedVoterIds.add(voterIdStr);
         processed++;
         summary.successfullyProcessed++;
+        
+        if (processed % 50 === 0) {
+          console.log(`Processed ${processed} voter contacts...`);
+        }
         
       } catch (error) {
         errors.push(`Row ${i + 2}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         summary.errors++;
       }
     }
-
+    
+    console.log(`Import completed: ${processed} processed, ${summary.duplicates} duplicates, ${summary.errors} errors`);
     return { processed, errors, summary };
   }
 
-  private normalizeContactData(row: ExcelRow, rowNumber: number): InsertContact | null {
+  private normalizeVoterData(row: VoterExcelRow, rowNumber: number): InsertContact | null {
     try {
-      // Map common Excel column names to our schema
-      const fullName = this.getFieldValue(row, ['full_name', 'name', 'Full Name', 'Name', 'FULL_NAME']);
-      const firstName = this.getFieldValue(row, ['first_name', 'firstName', 'First Name', 'FIRST_NAME']);
-      const lastName = this.getFieldValue(row, ['last_name', 'lastName', 'Last Name', 'LAST_NAME']);
-      const middleName = this.getFieldValue(row, ['middle_name', 'middleName', 'Middle Name', 'MIDDLE_NAME']);
+      const voterIdStr = String(row.VoterID || '').trim();
       
-      // Generate full name if not provided
-      let normalizedFullName = fullName;
-      if (!normalizedFullName && (firstName || lastName)) {
-        normalizedFullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
+      if (!voterIdStr) {
+        return null;
       }
-
-      if (!normalizedFullName) {
+      
+      // Extract name data
+      const firstName = row.First_Name ? String(row.First_Name).trim() : null;
+      const lastName = row.Last_Name ? String(row.Last_Name).trim() : null;
+      const middleName = row.Middle_Name && String(row.Middle_Name).trim() !== 'NULL' ? String(row.Middle_Name).trim() : null;
+      
+      if (!firstName && !lastName) {
         return null; // Skip rows without names
       }
-
-      // Parse and normalize DOB
-      const dobRaw = this.getFieldValue(row, ['date_of_birth', 'dob', 'Date of Birth', 'DOB', 'birthdate']);
-      let dateOfBirth: string | null = null;
-      if (dobRaw) {
-        dateOfBirth = this.normalizeDateOfBirth(dobRaw);
+      
+      // Parse dates from Excel format (days since 1900-01-01)
+      const parseExcelDate = (value: string | number | undefined): string | null => {
+        if (!value) return null;
+        
+        if (typeof value === 'number') {
+          // Excel date serial number
+          const excelEpoch = new Date('1900-01-01T00:00:00Z').getTime();
+          const date = new Date(excelEpoch + (value - 1) * 24 * 60 * 60 * 1000);
+          return date.toISOString().split('T')[0];
+        }
+        
+        const parsed = new Date(String(value));
+        if (!isNaN(parsed.getTime())) {
+          return parsed.toISOString().split('T')[0];
+        }
+        
+        return null;
+      };
+      
+      // Build address
+      const buildAddress = (): string | null => {
+        if (row.Formatted_Address) {
+          return String(row.Formatted_Address).trim();
+        }
+        return null;
+      };
+      
+      // Extract state from City_State
+      let state: string | null = null;
+      if (row.City_State && typeof row.City_State === 'string') {
+        const cityState = row.City_State.trim();
+        const parts = cityState.split(' ');
+        if (parts.length >= 2) {
+          state = parts[parts.length - 1]; // Last part should be state
+        }
       }
-
-      // Normalize address
-      const streetAddress = this.getFieldValue(row, ['address', 'street_address', 'Address', 'Street Address']);
-      const city = this.normalizeCity(this.getFieldValue(row, ['city', 'City', 'CITY']));
-      const state = this.normalizeState(this.getFieldValue(row, ['state', 'State', 'STATE']));
-      const zipCode = this.normalizeZipCode(this.getFieldValue(row, ['zip', 'zip_code', 'zipcode', 'Zip', 'ZIP']));
-
-      // Normalize district info
-      const district = this.getFieldValue(row, ['district', 'congressional_district', 'District']);
-      const precinct = this.getFieldValue(row, ['precinct', 'Precinct']);
-
-      // Generate system ID
-      const systemId = `VV-2024-${String(Date.now()).slice(-6)}${String(rowNumber).padStart(3, '0')}`;
-
+      
+      // Generate system ID and full name
+      const systemId = `VV-${voterIdStr}`;
+      const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
+      
       return {
         systemId,
-        fullName: normalizedFullName,
-        firstName: firstName || this.extractFirstName(normalizedFullName),
+        fullName,
+        voterIdRedacted: voterIdStr,
+        firstName,
+        lastName, 
         middleName,
-        lastName: lastName || this.extractLastName(normalizedFullName),
-        dateOfBirth,
-        streetAddress,
-        city,
+        dateOfBirth: parseExcelDate(row.Birth_Date),
+        streetAddress: buildAddress(),
+        city: row.City_Name ? String(row.City_Name).trim() : null,
         state,
-        zipCode,
-        district,
-        precinct,
+        zipCode: row.Zip_Code ? String(row.Zip_Code).trim() : null,
+        registrationDate: parseExcelDate(row.Registration_Date),
+        party: row.Party && String(row.Party).trim() !== 'NULL' ? String(row.Party).trim() : null,
+        voterStatus: row.Voter_Status ? String(row.Voter_Status).trim() : null,
+        district: row.Congressional_District ? String(row.Congressional_District).trim() : null,
+        precinct: row.Precinct ? String(row.Precinct).trim() : null,
         supporterStatus: 'unknown',
         notes: null,
       };
 
     } catch (error) {
-      console.error(`Error normalizing row ${rowNumber}:`, error);
+      console.error(`Error normalizing voter row ${rowNumber}:`, error);
       return null;
     }
   }
 
-  private getFieldValue(row: ExcelRow, fieldNames: string[]): string | null {
+  private getFieldValue(row: VoterExcelRow, fieldNames: string[]): string | null {
     for (const fieldName of fieldNames) {
       if (row[fieldName] !== undefined && row[fieldName] !== null && row[fieldName] !== '') {
         return String(row[fieldName]).trim();
@@ -211,14 +272,43 @@ class ExcelService {
     return parts.length > 1 ? parts[parts.length - 1] : null;
   }
 
-  private async findDuplicateContact(contact: InsertContact): Promise<any> {
-    // Simple duplicate detection by name and DOB
-    const result = await storage.searchContacts(contact.fullName || '', {}, 10, 0);
-    
-    return result.contacts.find(existing => 
-      existing.fullName === contact.fullName && 
-      existing.dateOfBirth === contact.dateOfBirth
-    );
+  private async findExistingVoterContact(voterIdRedacted: string): Promise<any> {
+    try {
+      const result = await storage.searchContacts(voterIdRedacted, {}, 1, 0);
+      return result.contacts.length > 0 ? result.contacts[0] : null;
+    } catch (error) {
+      console.error('Error checking for existing voter:', error);
+      return null;
+    }
+  }
+  
+  private async storeRelatedVoterData(contactId: string, row: VoterExcelRow, userId: string): Promise<void> {
+    try {
+      // Store phone number if available
+      if (row.Telephone_Number && String(row.Telephone_Number).trim() !== 'NULL') {
+        const phoneNumber = String(row.Telephone_Number).trim();
+        const phone: InsertContactPhone = {
+          contactId,
+          phoneNumber,
+          phoneType: 'home',
+          isPrimary: true,
+          createdBy: userId
+        };
+        await storage.addContactPhone(phone);
+      }
+      
+      // Add voter ID as searchable alias
+      if (row.VoterID) {
+        const voterAlias: InsertContactAlias = {
+          contactId,
+          alias: `Voter-${row.VoterID}`
+        };
+        await storage.addContactAlias(voterAlias);
+      }
+      
+    } catch (error) {
+      console.error('Error storing related voter data:', error);
+    }
   }
 }
 
