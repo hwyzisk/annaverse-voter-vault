@@ -4,12 +4,34 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { searchService } from "./services/searchService";
 import { excelService } from "./services/excelService";
-// import { auditService } from "./services/auditService";
+import { auditService } from "./services/auditService";
 import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactAliasSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 
-const upload = multer({ storage: multer.memoryStorage() });
+// Enhanced multer configuration with security limits
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max file size
+    files: 1 // Only allow single file upload
+  },
+  fileFilter: (req, file, cb) => {
+    // Validate file type - only allow Excel files
+    const allowedTypes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'application/octet-stream' // Some browsers send this for Excel files
+    ];
+    
+    if (allowedTypes.includes(file.mimetype) || 
+        file.originalname.match(/\.(xlsx|xls)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only Excel files (.xlsx, .xls) are allowed.'));
+    }
+  }
+});
 
 // Middleware to check user role
 const requireRole = (roles: string[]) => {
@@ -129,8 +151,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update contact
       const updatedContact = await storage.updateContact(contactId, updates, userId);
 
-      // Log audit trail - to be implemented
-      // await auditService.logContactUpdate(originalContact, updatedContact, userId);
+      // Log audit trail
+      await auditService.logContactUpdate(originalContact, updatedContact, userId);
 
       res.json(updatedContact);
     } catch (error) {
@@ -150,8 +172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const phone = await storage.addContactPhone(phoneData);
       
-      // Log audit - to be implemented
-      // await auditService.logPhoneAdd(phone, req.currentUser.id);
+      // Log audit
+      await auditService.logPhoneAdd(phone, req.currentUser.id);
 
       res.json(phone);
     } catch (error) {
@@ -197,8 +219,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const email = await storage.addContactEmail(emailData);
       
-      // Log audit - to be implemented
-      // await auditService.logEmailAdd(email, req.currentUser.id);
+      // Log audit
+      await auditService.logEmailAdd(email, req.currentUser.id);
 
       res.json(email);
     } catch (error) {
@@ -333,18 +355,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Excel seeding endpoint
-  app.post('/api/admin/seed-excel', isAuthenticated, requireRole(['admin']), upload.single('excel'), async (req: any, res) => {
+  // Excel seeding endpoint with enhanced security
+  app.post('/api/admin/seed-excel', isAuthenticated, requireRole(['admin']), (req: any, res: any, next: any) => {
+    // Custom upload handler with enhanced error handling
+    upload.single('excel')(req, res, (err: any) => {
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(413).json({ message: 'File too large. Maximum size is 50MB.' });
+        }
+        if (err.code === 'LIMIT_FILE_COUNT') {
+          return res.status(400).json({ message: 'Too many files. Only one file allowed.' });
+        }
+        return res.status(400).json({ message: `Upload error: ${err.message}` });
+      }
+      if (err) {
+        return res.status(400).json({ message: err.message });
+      }
+      next();
+    });
+  }, async (req: any, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "Excel file required" });
+        return res.status(400).json({ 
+          message: "Excel file required",
+          allowedTypes: ['.xlsx', '.xls'],
+          maxSize: '50MB'
+        });
       }
 
+      // Additional validation
+      if (req.file.size === 0) {
+        return res.status(400).json({ message: "Empty file not allowed" });
+      }
+
+      // Log security audit for file upload
+      console.log(`Excel import initiated by admin ${req.currentUser.email}: ${req.file.originalname} (${req.file.size} bytes)`);
+
       const result = await excelService.processExcelFile(req.file.buffer, req.currentUser.id);
+      
+      // Log completion audit
+      console.log(`Excel import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);
+      
+      // Log audit trail for Excel import
+      await auditService.logExcelImport(
+        req.currentUser.id, 
+        req.file.originalname, 
+        req.file.size, 
+        result
+      );
+      
       res.json(result);
     } catch (error) {
       console.error("Error processing Excel file:", error);
-      res.status(500).json({ message: "Failed to process Excel file" });
+      
+      // Enhanced error response with security considerations
+      if (error instanceof Error) {
+        // Don't expose internal error details to prevent information leakage
+        const isValidationError = error.message.includes('validation') || 
+                                 error.message.includes('format') ||
+                                 error.message.includes('schema');
+        
+        if (isValidationError) {
+          res.status(400).json({ message: error.message });
+        } else {
+          res.status(500).json({ message: "Internal server error processing Excel file" });
+        }
+      } else {
+        res.status(500).json({ message: "Failed to process Excel file" });
+      }
     }
   });
 

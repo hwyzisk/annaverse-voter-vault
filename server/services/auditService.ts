@@ -220,6 +220,55 @@ class AuditService {
       }
     });
   }
+
+  async logExcelImport(userId: string, fileName: string, fileSize: number, result: any): Promise<void> {
+    await storage.logAudit({
+      contactId: null,
+      userId,
+      action: 'excel_import',
+      tableName: 'contacts',
+      recordId: `import_${Date.now()}`,
+      fieldName: 'bulk_import',
+      oldValue: null,
+      newValue: JSON.stringify({
+        fileName,
+        fileSize,
+        processed: result.processed,
+        errors: result.errors?.length || 0,
+        duplicates: result.summary?.duplicates || 0,
+        successfullyProcessed: result.summary?.successfullyProcessed || 0
+      }),
+      metadata: {
+        timestamp: new Date().toISOString(),
+        importType: 'voter_data',
+        fileName: fileName,
+        fileSize: fileSize,
+        resultSummary: result.summary
+      }
+    });
+  }
+
+  async logContactCreate(contact: any, userId: string, source: string = 'manual'): Promise<void> {
+    await storage.logAudit({
+      contactId: contact.id,
+      userId,
+      action: 'create',
+      tableName: 'contacts',
+      recordId: contact.id,
+      fieldName: null,
+      oldValue: null,
+      newValue: JSON.stringify({
+        systemId: contact.systemId,
+        fullName: contact.fullName,
+        voterIdRedacted: contact.voterIdRedacted
+      }),
+      metadata: {
+        timestamp: new Date().toISOString(),
+        source: source, // 'manual' or 'excel_import'
+        supporterStatus: contact.supporterStatus
+      }
+    });
+  }
 }
 
 export const auditService = new AuditService();

@@ -1,6 +1,8 @@
 import * as XLSX from 'xlsx';
 import { storage } from '../storage';
+import { auditService } from './auditService';
 import { nanoid } from 'nanoid';
+import { createHash } from 'crypto';
 import type { InsertContact, InsertContactPhone, InsertContactAlias } from '@shared/schema';
 
 interface VoterExcelRow {
@@ -31,6 +33,21 @@ interface VoterExcelRow {
 }
 
 class ExcelService {
+  // Hash voter ID for consistent duplicate detection while preserving privacy
+  private hashVoterId(voterId: string): string {
+    return createHash('sha256').update(voterId.trim()).digest('hex');
+  }
+
+  // Create privacy-compliant redacted voter ID (last 4 digits with prefix)
+  private redactVoterId(voterId: string): string {
+    const cleanId = voterId.trim();
+    if (cleanId.length <= 4) {
+      return `***${cleanId}`;
+    }
+    const lastFour = cleanId.slice(-4);
+    return `***${lastFour}`;
+  }
+
   async processExcelFile(buffer: Buffer, userId: string): Promise<{
     processed: number;
     errors: string[];
@@ -53,7 +70,7 @@ class ExcelService {
     };
 
     console.log(`Processing ${rawData.length} voter records from Excel file`);
-    const processedVoterIds = new Set<string>();
+    const processedVoterIds = new Set<string>(); // Will store hashed voter IDs
 
     for (let i = 0; i < rawData.length; i++) {
       try {
@@ -65,9 +82,10 @@ class ExcelService {
           continue;
         }
         
-        // Check for duplicates within the file
-        if (processedVoterIds.has(voterIdStr)) {
-          errors.push(`Row ${i + 2}: Duplicate VoterID ${voterIdStr} in file`);
+        // Check for duplicates within the file using hashed ID
+        const hashedVoterId = this.hashVoterId(voterIdStr);
+        if (processedVoterIds.has(hashedVoterId)) {
+          errors.push(`Row ${i + 2}: Duplicate VoterID ${this.redactVoterId(voterIdStr)} in file`);
           summary.duplicates++;
           continue;
         }
@@ -80,10 +98,10 @@ class ExcelService {
           continue;
         }
 
-        // Check for existing contact in database by voter ID
-        const existing = await this.findExistingVoterContact(voterIdStr);
+        // Check for existing contact in database by hashed voter ID
+        const existing = await this.findExistingVoterContact(hashedVoterId);
         if (existing) {
-          errors.push(`Row ${i + 2}: Voter ${voterIdStr} already exists in database`);
+          errors.push(`Row ${i + 2}: Voter ${this.redactVoterId(voterIdStr)} already exists in database`);
           summary.duplicates++;
           continue;
         }
@@ -94,10 +112,13 @@ class ExcelService {
           lastUpdatedBy: userId,
         });
 
+        // Log audit trail for contact creation from Excel import
+        await auditService.logContactCreate(contact, userId, 'excel_import');
+
         // Store related data (phones, aliases)
         await this.storeRelatedVoterData(contact.id, row, userId);
         
-        processedVoterIds.add(voterIdStr);
+        processedVoterIds.add(hashedVoterId);
         processed++;
         summary.successfullyProcessed++;
         
@@ -169,14 +190,15 @@ class ExcelService {
         }
       }
       
-      // Generate system ID and full name
-      const systemId = `VV-${voterIdStr}`;
+      // Generate system ID using hashed voter ID and full name
+      const hashedVoterId = this.hashVoterId(voterIdStr);
+      const systemId = `VV-${hashedVoterId.substring(0, 8)}`; // Use first 8 chars of hash
       const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ');
       
       return {
         systemId,
         fullName,
-        voterIdRedacted: voterIdStr,
+        voterIdRedacted: this.redactVoterId(voterIdStr), // PRIVACY: Store only redacted form
         firstName,
         lastName, 
         middleName,
@@ -272,9 +294,11 @@ class ExcelService {
     return parts.length > 1 ? parts[parts.length - 1] : null;
   }
 
-  private async findExistingVoterContact(voterIdRedacted: string): Promise<any> {
+  private async findExistingVoterContact(hashedVoterId: string): Promise<any> {
     try {
-      const result = await storage.searchContacts(voterIdRedacted, {}, 1, 0);
+      // Search by systemId which contains the hash prefix
+      const systemIdPrefix = `VV-${hashedVoterId.substring(0, 8)}`;
+      const result = await storage.searchContacts(systemIdPrefix, {}, 1, 0);
       return result.contacts.length > 0 ? result.contacts[0] : null;
     } catch (error) {
       console.error('Error checking for existing voter:', error);
@@ -294,16 +318,26 @@ class ExcelService {
           isPrimary: true,
           createdBy: userId
         };
-        await storage.addContactPhone(phone);
+        const createdPhone = await storage.addContactPhone(phone);
+        
+        // Log audit trail for phone creation from Excel import
+        await auditService.logPhoneAdd(createdPhone, userId);
       }
       
-      // Add voter ID as searchable alias
+      // Add redacted voter ID as searchable alias for privacy compliance
       if (row.VoterID) {
         const voterAlias: InsertContactAlias = {
           contactId,
-          alias: `Voter-${row.VoterID}`
+          alias: `Voter-${this.redactVoterId(String(row.VoterID))}`
         };
         await storage.addContactAlias(voterAlias);
+        
+        // Log audit trail for alias creation from Excel import
+        await auditService.logUserAction(userId, 'create_alias', {
+          contactId,
+          alias: voterAlias.alias,
+          source: 'excel_import'
+        });
       }
       
     } catch (error) {
