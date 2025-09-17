@@ -46,46 +46,6 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
           </span>
         </div>
         <div className="flex items-center space-x-3">
-          {/* Notifications with better visibility */}
-          <DropdownMenu open={showNotifications} onOpenChange={setShowNotifications}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="relative p-2 h-10 w-10"
-                data-testid="button-notifications"
-                onClick={() => onNotificationClick?.()}
-              >
-                <i className="fas fa-bell text-lg"></i>
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-xs flex items-center justify-center font-medium">
-                  3
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
-              <div className="p-3 border-b">
-                <p className="font-medium">Notifications</p>
-                <p className="text-sm text-muted-foreground">You have 3 unread notifications</p>
-              </div>
-              <div className="p-2">
-                <div className="p-3 text-sm text-muted-foreground text-center">
-                  <i className="fas fa-bell-slash text-2xl mb-2 opacity-50"></i>
-                  <p>No new notifications</p>
-                </div>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          
-          {/* Help Button with better visibility */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="p-2 h-10 w-10"
-            data-testid="button-help"
-            title="Help & Documentation"
-          >
-            <i className="fas fa-question-circle text-lg"></i>
-          </Button>
           
           {/* User Profile Dropdown */}
           <DropdownMenu>
