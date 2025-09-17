@@ -9,6 +9,31 @@ import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, ins
 import { z } from "zod";
 import multer from "multer";
 
+// Secure filename validation schema
+const attachedExcelRequestSchema = z.object({
+  filename: z
+    .string()
+    .min(1, "Filename is required")
+    .max(255, "Filename too long")
+    // Prevent path traversal - no path separators allowed
+    .refine(
+      (filename) => !filename.includes('/') && !filename.includes('\\') && !filename.includes('..'),
+      "Invalid filename - path separators not allowed"
+    )
+    // Only allow Excel file extensions
+    .refine(
+      (filename) => /\.(xlsx|xls)$/i.test(filename),
+      "Invalid file type - only .xlsx and .xls files allowed"
+    )
+    // Prevent special characters that could be problematic
+    .refine(
+      (filename) => !/[<>:"|?*\x00-\x1f]/.test(filename),
+      "Invalid characters in filename"
+    )
+});
+import { readFile, stat } from "fs/promises";
+import path from "path";
+
 // Enhanced multer configuration with security limits
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -454,6 +479,135 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ message: "Failed to process Excel file" });
       }
+    }
+  });
+
+  // Process attached Excel file endpoint - SECURED AGAINST PATH TRAVERSAL
+  app.post('/api/admin/process-attached-excel', isAuthenticated, requireRole(['admin']), async (req: any, res: any) => {
+    try {
+      // Validate request body with secure schema
+      const validatedRequest = attachedExcelRequestSchema.parse(req.body);
+      const { filename } = validatedRequest;
+      
+      // Secure path resolution to prevent directory traversal attacks
+      const attachedAssetsDir = path.resolve(process.cwd(), 'attached_assets');
+      const requestedFilePath = path.resolve(attachedAssetsDir, filename);
+      
+      // Critical security check: ensure resolved path is within allowed directory
+      if (!requestedFilePath.startsWith(attachedAssetsDir + path.sep) && 
+          requestedFilePath !== attachedAssetsDir) {
+        console.warn(`Security violation: Path traversal attempt by admin ${req.currentUser.email}: ${filename}`);
+        return res.status(400).json({ 
+          message: "Invalid file path - access denied",
+          details: "File must be located within the attached assets directory"
+        });
+      }
+      
+      // File existence and security validation using fs.stat
+      let fileStats;
+      try {
+        fileStats = await stat(requestedFilePath);
+      } catch (statError: any) {
+        if (statError.code === 'ENOENT') {
+          return res.status(404).json({ 
+            message: "File not found in attached assets",
+            filename: filename
+          });
+        }
+        console.error(`File stat error for ${filename}:`, statError);
+        return res.status(500).json({ message: "Unable to access file" });
+      }
+      
+      // Verify it's a regular file (not a directory or special file)
+      if (!fileStats.isFile()) {
+        console.warn(`Security violation: Non-file access attempt by admin ${req.currentUser.email}: ${filename}`);
+        return res.status(400).json({ message: "Invalid file type - directories and special files not allowed" });
+      }
+      
+      // Enforce file size limit (50MB to match upload route)
+      const maxFileSize = 50 * 1024 * 1024; // 50MB
+      if (fileStats.size > maxFileSize) {
+        return res.status(413).json({ 
+          message: "File too large",
+          maxSize: "50MB",
+          actualSize: `${Math.round(fileStats.size / (1024 * 1024) * 100) / 100}MB`
+        });
+      }
+      
+      // Additional security check for empty files
+      if (fileStats.size === 0) {
+        return res.status(400).json({ message: "Empty files are not allowed" });
+      }
+      
+      // Read the Excel file using the securely validated path
+      const buffer = await readFile(requestedFilePath);
+      
+      // Verify buffer size matches file stats (additional integrity check)
+      if (buffer.length !== fileStats.size) {
+        console.error(`File integrity check failed for ${filename}: expected ${fileStats.size}, got ${buffer.length}`);
+        return res.status(500).json({ message: "File integrity check failed" });
+      }
+      
+      // Log security audit for attached file processing
+      console.log(`Secure attached Excel import initiated by admin ${req.currentUser.email}: ${filename} (${buffer.length} bytes)`);
+      
+      // Process the Excel file using existing service
+      const result = await excelService.processExcelFile(buffer, req.currentUser.id);
+      
+      // Log completion audit
+      console.log(`Attached Excel import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);
+      
+      // Log audit trail for attached Excel import
+      await auditService.logExcelImport(
+        req.currentUser.id, 
+        filename, 
+        buffer.length, 
+        result
+      );
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error processing attached Excel file:", error);
+      
+      // Enhanced error handling with security considerations
+      if (error instanceof z.ZodError) {
+        // Handle validation errors explicitly
+        const firstError = error.errors[0];
+        return res.status(400).json({ 
+          message: "Invalid request data",
+          details: firstError.message,
+          field: firstError.path.join('.')
+        });
+      }
+      
+      // Handle known error types explicitly to avoid information leakage
+      if (error instanceof Error) {
+        // File system errors (cast to any for code property access)
+        const fsError = error as any;
+        if (fsError.code === 'EACCES') {
+          return res.status(403).json({ message: "File access denied" });
+        }
+        if (fsError.code === 'EISDIR') {
+          return res.status(400).json({ message: "Cannot process directories" });
+        }
+        if (fsError.code === 'EMFILE' || fsError.code === 'ENFILE') {
+          return res.status(503).json({ message: "Server temporarily unavailable" });
+        }
+        
+        // Excel processing errors (preserve these for user feedback)
+        if (error.message.toLowerCase().includes('excel') || 
+            error.message.toLowerCase().includes('workbook') ||
+            error.message.toLowerCase().includes('xlsx') ||
+            error.message.toLowerCase().includes('spreadsheet')) {
+          return res.status(400).json({ 
+            message: "Excel processing error", 
+            details: error.message 
+          });
+        }
+      }
+      
+      // Generic fallback - don't leak internal error details
+      return res.status(500).json({ message: "Internal server error processing file" });
     }
   });
 
