@@ -48,15 +48,13 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
       if (filters.quickFilters?.includes('supporters')) {
         params.append('supporterStatus', 'supporter');
       }
-      if (filters.quickFilters?.includes('missing-phone')) {
-        params.append('missingPhone', 'true');
+      
+      // Add age range from advanced filters
+      if (filters.ageMin && filters.ageMin.toString().trim()) {
+        params.append('minAge', filters.ageMin.toString());
       }
-      if (filters.quickFilters?.includes('has-email')) {
-        params.append('hasEmail', 'true');
-      }
-      if (filters.quickFilters?.includes('age-18-25')) {
-        params.append('minAge', '18');
-        params.append('maxAge', '25');
+      if (filters.ageMax && filters.ageMax.toString().trim()) {
+        params.append('maxAge', filters.ageMax.toString());
       }
 
       const response = await fetch(`/api/contacts/search?${params}`);

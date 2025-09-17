@@ -27,9 +27,6 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const quickFilters = [
-    { id: "missing-phone", label: "Missing Phone" },
-    { id: "has-email", label: "Has Email" },
-    { id: "age-18-25", label: "Age 18-25" },
     { id: "supporters", label: "Supporters" },
   ];
 
