@@ -50,41 +50,16 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
           </li>
           
           {user.role === 'admin' && (
-            <>
-              <li className="pt-4 border-t border-border">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 pb-2">
-                  Admin Tools
-                </p>
-                <button
-                  onClick={onAdminClick}
-                  className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
-                  data-testid="button-user-management"
-                >
-                  <Users className="w-5 h-5" />
-                  <span>User Management</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={onAdminClick}
-                  className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
-                  data-testid="button-audit-logs"
-                >
-                  <ClipboardList className="w-5 h-5" />
-                  <span>Audit Logs</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={onAdminClick}
-                  className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
-                  data-testid="button-settings"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span>Settings</span>
-                </button>
-              </li>
-            </>
+            <li className="pt-4 border-t border-border">
+              <button
+                onClick={onAdminClick}
+                className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground w-full text-left"
+                data-testid="button-admin-tools"
+              >
+                <Settings className="w-5 h-5" />
+                <span>Admin Tools</span>
+              </button>
+            </li>
           )}
         </ul>
       </nav>
