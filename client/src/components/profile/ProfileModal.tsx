@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetFooter, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +35,7 @@ interface ContactDetails extends Contact {
 
 export default function ProfileModal({ contact, user, isOpen, onClose }: ProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const isMobile = useIsMobile();
   const [notes, setNotes] = useState(contact.notes || "");
   const [supporterStatus, setSupporterStatus] = useState(contact.supporterStatus || "unknown");
   const [volunteerLikeliness, setVolunteerLikeliness] = useState(contact.volunteerLikeliness || "unknown");
@@ -240,9 +244,27 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   const canEdit = user.role === 'admin' || user.role === 'editor';
 
   if (isLoading) {
+    if (isMobile) {
+      return (
+        <Sheet open={isOpen} onOpenChange={onClose}>
+          <SheetContent className="w-full sm:max-w-none p-0 overflow-hidden">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Contact Profile - Loading</SheetTitle>
+              <SheetDescription>Loading contact information</SheetDescription>
+            </SheetHeader>
+            <div className="flex items-center justify-center p-8 h-full">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          </SheetContent>
+        </Sheet>
+      );
+    }
+
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="sr-only">Contact Profile - Loading</DialogTitle>
+          <DialogDescription className="sr-only">Loading contact information</DialogDescription>
           <div className="flex items-center justify-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
@@ -259,9 +281,657 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     auditLogs: [],
   };
 
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent className="w-full sm:max-w-none p-0 overflow-hidden flex flex-col">
+          <SheetHeader className="sr-only">
+            <SheetTitle>{details.fullName} - Contact Profile</SheetTitle>
+            <SheetDescription>Contact information and details for {details.fullName}</SheetDescription>
+          </SheetHeader>
+          
+          {/* Mobile Sticky Header */}
+          <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="ghost"
+                  size="default"
+                  onClick={onClose}
+                  className="h-11 w-11 p-0"
+                  data-testid="button-close-profile"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div className="min-w-0">
+                  <h2 className="text-lg font-semibold truncate" data-testid="text-contact-name">
+                    {details.fullName}
+                  </h2>
+                  <p className="text-sm text-muted-foreground truncate">
+                    ID: {details.systemId}
+                  </p>
+                </div>
+              </div>
+              {canEdit && (
+                <Button
+                  size="default"
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="h-11 px-4"
+                  data-testid="button-edit"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  {isEditing ? 'Cancel' : 'Edit'}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Content with Accordion */}
+          <div className="flex-1 overflow-auto">
+            <Accordion type="multiple" defaultValue={["status", "identity"]} className="px-4">
+              {/* Supporter Status Section */}
+              <AccordionItem value="status">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  Supporter Status
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  {canEdit && isEditing ? (
+                    <RadioGroup 
+                      value={supporterStatus}
+                      onValueChange={(value) => setSupporterStatus(value as any)}
+                      className="space-y-3"
+                      data-testid="radio-supporter-status"
+                    >
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                        <RadioGroupItem value="confirmed-supporter" id="mobile-confirmed-supporter" />
+                        <label htmlFor="mobile-confirmed-supporter" className="text-base font-medium flex-1">
+                          Confirmed Supporter
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                        <RadioGroupItem value="likely-supporter" id="mobile-likely-supporter" />
+                        <label htmlFor="mobile-likely-supporter" className="text-base font-medium flex-1">
+                          Likely Supporter
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                        <RadioGroupItem value="opposition" id="mobile-opposition" />
+                        <label htmlFor="mobile-opposition" className="text-base font-medium flex-1">
+                          Opposition
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                        <RadioGroupItem value="unknown" id="mobile-unknown" />
+                        <label htmlFor="mobile-unknown" className="text-base font-medium flex-1">
+                          Unknown
+                        </label>
+                      </div>
+                    </RadioGroup>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      <Badge 
+                        variant={
+                          details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' : 
+                          details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
+                        }
+                        className="text-sm px-3 py-1"
+                        data-testid="badge-supporter-status"
+                      >
+                        {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' : 
+                         details.supporterStatus === 'likely-supporter' ? 'Likely Supporter' : 
+                         details.supporterStatus === 'opposition' ? 'Opposition' : 'Unknown'}
+                      </Badge>
+                    </div>
+                  )}
+
+                  <Separator className="my-4" />
+
+                  {/* Volunteer Likeliness */}
+                  <div className="mb-4">
+                    <Label className="text-base font-medium mb-3 block">Likeliness to Volunteer</Label>
+                    {canEdit && isEditing ? (
+                      <RadioGroup 
+                        value={volunteerLikeliness}
+                        onValueChange={(value) => setVolunteerLikeliness(value as any)}
+                        className="space-y-3"
+                        data-testid="radio-volunteer-likeliness"
+                      >
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="confirmed-volunteer" id="mobile-confirmed-volunteer" />
+                          <label htmlFor="mobile-confirmed-volunteer" className="text-base font-medium flex-1">
+                            Confirmed Volunteer
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="likely-to-volunteer" id="mobile-likely-to-volunteer" />
+                          <label htmlFor="mobile-likely-to-volunteer" className="text-base font-medium flex-1">
+                            Likely To Volunteer
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="will-not-volunteer" id="mobile-will-not-volunteer" />
+                          <label htmlFor="mobile-will-not-volunteer" className="text-base font-medium flex-1">
+                            Will Not Volunteer
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="unknown" id="mobile-volunteer-unknown" />
+                          <label htmlFor="mobile-volunteer-unknown" className="text-base font-medium flex-1">
+                            Unknown
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    ) : (
+                      <Badge 
+                        variant={
+                          details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' : 
+                          details.volunteerLikeliness === 'will-not-volunteer' ? 'destructive' : 'secondary'
+                        }
+                        className="text-sm px-3 py-1"
+                        data-testid="badge-volunteer-likeliness"
+                      >
+                        {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' : 
+                         details.volunteerLikeliness === 'likely-to-volunteer' ? 'Likely To Volunteer' : 
+                         details.volunteerLikeliness === 'will-not-volunteer' ? 'Will Not Volunteer' : 'Unknown'}
+                      </Badge>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Identity Information */}
+              <AccordionItem value="identity">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  Identity Information
+                </AccordionTrigger>
+                <AccordionContent className="pb-6 space-y-4">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Full Name</Label>
+                    <p className="text-base mt-1">{details.fullName}</p>
+                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Date of Birth</Label>
+                    <p className="text-base mt-1">
+                      {details.dateOfBirth ? (
+                        <>
+                          {new Date(details.dateOfBirth).toLocaleDateString()} (Age {calculateAge(details.dateOfBirth)})
+                        </>
+                      ) : (
+                        'Not provided'
+                      )}
+                    </p>
+                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Party Affiliation</Label>
+                    <p className={`text-base mt-1 font-medium ${getPartyColor(details.party)}`} data-testid="text-party">
+                      {formatParty(details.party)}
+                    </p>
+                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Aliases/Nicknames</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {details.aliases.map((alias) => (
+                        <Badge key={alias.id} variant="secondary" className="text-sm">
+                          {alias.alias}
+                          {canEdit && (
+                            <button 
+                              onClick={() => {
+                                // Add alias deletion functionality here when backend supports it
+                                console.log('Delete alias:', alias.id);
+                              }}
+                              className="ml-2 text-muted-foreground hover:text-foreground"
+                              data-testid={`button-delete-alias-${alias.id}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
+                    {canEdit && (
+                      <div className="flex items-center space-x-2 mt-3">
+                        <Input
+                          placeholder="Add alias..."
+                          value={newAlias}
+                          onChange={(e) => setNewAlias(e.target.value)}
+                          className="flex-1 h-11 text-base"
+                          data-testid="input-new-alias"
+                        />
+                        <Button
+                          size="default"
+                          onClick={() => newAlias && addAliasMutation.mutate(newAlias)}
+                          disabled={!newAlias || addAliasMutation.isPending}
+                          className="h-11 px-4"
+                          data-testid="button-add-alias"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Address Information */}
+              <AccordionItem value="address">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  Address Information
+                </AccordionTrigger>
+                <AccordionContent className="pb-6 space-y-4">
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Street Address</Label>
+                    <p className="text-base mt-1">{details.streetAddress || 'Not provided'}</p>
+                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">City</Label>
+                      <p className="text-base mt-1">{details.city || 'Not provided'}</p>
+                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">State / ZIP</Label>
+                      <p className="text-base mt-1">
+                        {details.state || 'N/A'} {details.zipCode || ''}
+                      </p>
+                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Congressional District</Label>
+                      <p className="text-base mt-1">{details.district || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Precinct</Label>
+                      <p className="text-base mt-1">{details.precinct || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Contact Information */}
+              <AccordionItem value="contact">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  Contact Information
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  {/* Phone Numbers */}
+                  <div className="mb-6">
+                    <Label className="text-base font-medium mb-3 block">Phone Numbers</Label>
+                    <div className="space-y-3">
+                      {details.phones.map((phone) => (
+                        <div key={phone.id} className="p-4 bg-muted/50 rounded-lg">
+                          {editingPhone?.id === phone.id ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-3">
+                                <Phone className="w-4 h-4 text-muted-foreground" />
+                                <Input
+                                  type="tel"
+                                  value={editingPhone.phoneNumber}
+                                  onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneNumber: e.target.value } : null)}
+                                  className="flex-1 h-11 text-base"
+                                  data-testid={`input-edit-phone-${phone.id}`}
+                                />
+                              </div>
+                              <select 
+                                value={editingPhone.phoneType}
+                                onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneType: e.target.value } : null)}
+                                className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                              >
+                                <option value="mobile">Mobile</option>
+                                <option value="home">Home</option>
+                                <option value="work">Work</option>
+                                <option value="other">Other</option>
+                              </select>
+                              <div className="flex items-center space-x-2">
+                                <Button 
+                                  variant="default" 
+                                  size="default"
+                                  onClick={() => updatePhoneMutation.mutate({
+                                    phoneId: phone.id,
+                                    updates: { phoneNumber: editingPhone.phoneNumber, phoneType: editingPhone.phoneType }
+                                  })}
+                                  disabled={updatePhoneMutation.isPending}
+                                  className="flex-1 h-11"
+                                  data-testid={`button-save-phone-${phone.id}`}
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Save
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="default"
+                                  onClick={() => setEditingPhone(null)}
+                                  className="flex-1 h-11"
+                                  data-testid={`button-cancel-phone-${phone.id}`}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Phone className="w-4 h-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-base font-medium">{phone.phoneNumber}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {phone.phoneType} {phone.isPrimary && '• Primary'}
+                                  </p>
+                                </div>
+                              </div>
+                              {canEdit && (
+                                <div className="flex items-center space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="default"
+                                    onClick={() => setEditingPhone({
+                                      id: phone.id,
+                                      phoneNumber: phone.phoneNumber,
+                                      phoneType: phone.phoneType || 'mobile'
+                                    })}
+                                    className="h-11 w-11 p-0"
+                                    data-testid={`button-edit-phone-${phone.id}`}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="default" 
+                                    className="h-11 w-11 p-0 text-destructive"
+                                    onClick={() => deletePhoneMutation.mutate(phone.id)}
+                                    disabled={deletePhoneMutation.isPending}
+                                    data-testid={`button-delete-phone-${phone.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {canEdit && (
+                        <div className="p-4 border border-dashed border-border rounded-lg space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <Phone className="w-4 h-4 text-muted-foreground" />
+                            <Input
+                              type="tel"
+                              placeholder="Phone number..."
+                              value={newPhone.phoneNumber}
+                              onChange={(e) => setNewPhone(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                              className="flex-1 h-11 text-base"
+                              data-testid="input-new-phone"
+                            />
+                          </div>
+                          <select 
+                            value={newPhone.phoneType}
+                            onChange={(e) => setNewPhone(prev => ({ ...prev, phoneType: e.target.value as any }))}
+                            className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                          >
+                            <option value="mobile">Mobile</option>
+                            <option value="home">Home</option>
+                            <option value="work">Work</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <Button
+                            size="default"
+                            onClick={() => newPhone.phoneNumber && addPhoneMutation.mutate(newPhone)}
+                            disabled={!newPhone.phoneNumber || addPhoneMutation.isPending}
+                            className="w-full h-11"
+                            data-testid="button-add-phone"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Phone Number
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <Separator className="my-6" />
+
+                  {/* Email Addresses */}
+                  <div>
+                    <Label className="text-base font-medium mb-3 block">Email Addresses</Label>
+                    <div className="space-y-3">
+                      {details.emails.map((email) => (
+                        <div key={email.id} className="p-4 bg-muted/50 rounded-lg">
+                          {editingEmail?.id === email.id ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center space-x-3">
+                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                <Input
+                                  type="email"
+                                  value={editingEmail.email}
+                                  onChange={(e) => setEditingEmail(prev => prev ? { ...prev, email: e.target.value } : null)}
+                                  className="flex-1 h-11 text-base"
+                                  data-testid={`input-edit-email-${email.id}`}
+                                />
+                              </div>
+                              <select 
+                                value={editingEmail.emailType}
+                                onChange={(e) => setEditingEmail(prev => prev ? { ...prev, emailType: e.target.value } : null)}
+                                className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                              >
+                                <option value="personal">Personal</option>
+                                <option value="work">Work</option>
+                                <option value="other">Other</option>
+                              </select>
+                              <div className="flex items-center space-x-2">
+                                <Button 
+                                  variant="default" 
+                                  size="default"
+                                  onClick={() => updateEmailMutation.mutate({
+                                    emailId: email.id,
+                                    updates: { email: editingEmail.email, emailType: editingEmail.emailType }
+                                  })}
+                                  disabled={updateEmailMutation.isPending}
+                                  className="flex-1 h-11"
+                                  data-testid={`button-save-email-${email.id}`}
+                                >
+                                  <Check className="w-4 h-4 mr-2" />
+                                  Save
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="default"
+                                  onClick={() => setEditingEmail(null)}
+                                  className="flex-1 h-11"
+                                  data-testid={`button-cancel-email-${email.id}`}
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Cancel
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-base font-medium">{email.email}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {email.emailType} {email.isPrimary && '• Primary'}
+                                  </p>
+                                </div>
+                              </div>
+                              {canEdit && (
+                                <div className="flex items-center space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="default"
+                                    onClick={() => setEditingEmail({
+                                      id: email.id,
+                                      email: email.email,
+                                      emailType: email.emailType || 'personal'
+                                    })}
+                                    className="h-11 w-11 p-0"
+                                    data-testid={`button-edit-email-${email.id}`}
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="default" 
+                                    className="h-11 w-11 p-0 text-destructive"
+                                    onClick={() => deleteEmailMutation.mutate(email.id)}
+                                    disabled={deleteEmailMutation.isPending}
+                                    data-testid={`button-delete-email-${email.id}`}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {canEdit && (
+                        <div className="p-4 border border-dashed border-border rounded-lg space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <Mail className="w-4 h-4 text-muted-foreground" />
+                            <Input
+                              type="email"
+                              placeholder="Email address..."
+                              value={newEmail.email}
+                              onChange={(e) => setNewEmail(prev => ({ ...prev, email: e.target.value }))}
+                              className="flex-1 h-11 text-base"
+                              data-testid="input-new-email"
+                            />
+                          </div>
+                          <select
+                            value={newEmail.emailType}
+                            onChange={(e) => setNewEmail(prev => ({ ...prev, emailType: e.target.value as any }))}
+                            className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                          >
+                            <option value="personal">Personal</option>
+                            <option value="work">Work</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <Button
+                            size="default"
+                            onClick={() => newEmail.email && addEmailMutation.mutate(newEmail)}
+                            disabled={!newEmail.email || addEmailMutation.isPending}
+                            className="w-full h-11"
+                            data-testid="button-add-email"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Email Address
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Notes Section */}
+              <AccordionItem value="notes">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  Notes
+                  <span className="text-xs text-muted-foreground ml-2">
+                    {notes.length}/500
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  {isEditing && canEdit ? (
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value.slice(0, 500))}
+                      placeholder="Add notes about this contact..."
+                      rows={6}
+                      className="text-base resize-none"
+                      data-testid="textarea-notes"
+                    />
+                  ) : (
+                    <p className="text-base whitespace-pre-wrap min-h-[6rem] p-3 bg-muted/50 rounded-lg">
+                      {notes || 'No notes added.'}
+                    </p>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Activity Timeline */}
+              <AccordionItem value="activity">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  Activity Timeline
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  <div className="space-y-4 max-h-80 overflow-y-auto">
+                    {details.auditLogs.length === 0 ? (
+                      <p className="text-base text-muted-foreground text-center py-8">No activity recorded.</p>
+                    ) : (
+                      details.auditLogs.map((log: any) => (
+                        <div key={log.id} className="flex space-x-3 p-4 bg-muted/50 rounded-lg">
+                          <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                            <History className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-base">
+                              <span className="font-medium">
+                                {log.user?.firstName} {log.user?.lastName}
+                              </span>
+                              <span> {log.action}d {log.fieldName}</span>
+                            </p>
+                            {(log.oldValue || log.newValue) && (
+                              <div className="mt-2 text-sm text-muted-foreground">
+                                {log.oldValue && <p>Before: {log.oldValue}</p>}
+                                {log.newValue && <p>After: {log.newValue}</p>}
+                              </div>
+                            )}
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {new Date(log.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                          {user.role === 'admin' && (
+                            <Button
+                              variant="ghost" 
+                              size="default"
+                              className="h-11 w-11 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Undo className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+
+          {/* Mobile Sticky Footer */}
+          {isEditing && canEdit && (
+            <SheetFooter className="sticky bottom-0 bg-background border-t border-border p-4">
+              <Button
+                onClick={handleSave}
+                disabled={updateContactMutation.isPending}
+                size="default"
+                className="w-full h-12 text-base"
+                data-testid="button-save"
+              >
+                {updateContactMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </SheetFooter>
+          )}
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop Dialog Layout
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogTitle className="sr-only">{details.fullName} - Contact Profile</DialogTitle>
+        <DialogDescription className="sr-only">Contact information and details for {details.fullName}</DialogDescription>
         <div className="flex flex-col h-full">
           {/* Profile Header */}
           <div className="border-b border-border pb-4">
