@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Phone, Mail, AlertTriangle, Search } from "lucide-react";
+import { Phone, Mail, AlertTriangle, Search, Eye } from "lucide-react";
 import { getPartyColor, formatParty } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
 
@@ -20,6 +21,7 @@ interface SearchResultsProps {
 
 export default function SearchResults({ nameSearch, filters, onContactSelect }: SearchResultsProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const isMobile = useIsMobile();
   const limit = 20;
 
   const { data, isLoading, error } = useQuery({
@@ -153,100 +155,171 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
         </CardContent>
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Name</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Age</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Location</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Party</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Contact</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Last Updated</th>
-                  <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {contacts.map((contact: Contact) => (
-                  <tr
-                    key={contact.id}
-                    className="hover:bg-muted/25 cursor-pointer"
-                    onClick={() => onContactSelect(contact)}
-                    data-testid={`row-contact-${contact.id}`}
-                  >
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium" data-testid={`text-name-${contact.id}`}>
+          {/* Desktop Table View */}
+          {!isMobile ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Name</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Age</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Location</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Party</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Contact</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Last Updated</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {contacts.map((contact: Contact) => (
+                    <tr
+                      key={contact.id}
+                      className="hover:bg-muted/25 cursor-pointer"
+                      onClick={() => onContactSelect(contact)}
+                      data-testid={`row-contact-${contact.id}`}
+                    >
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-medium" data-testid={`text-name-${contact.id}`}>
+                            {contact.fullName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            ID: {contact.systemId}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm" data-testid={`text-age-${contact.id}`}>
+                        {calculateAge(contact.dateOfBirth) || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-sm">{contact.city || 'N/A'}</p>
+                          <p className="text-sm text-muted-foreground">{contact.zipCode || 'N/A'}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4" data-testid={`text-party-${contact.id}`}>
+                        <span className={`text-sm font-medium ${getPartyColor(contact.party)}`}>
+                          {formatParty(contact.party)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          {(contact as any).manualPhoneCount > 0 ? (
+                            <Phone className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Phone className="w-3 h-3 text-gray-300" />
+                          )}
+                          {(contact as any).manualEmailCount > 0 ? (
+                            <Mail className="w-3 h-3 text-blue-600" />
+                          ) : (
+                            <Mail className="w-3 h-3 text-gray-300" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
+                        {contact.updatedAt ? new Date(contact.updatedAt).toLocaleDateString() : 'Never'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge 
+                          className={getSupporterStatusColor(contact.supporterStatus || 'unknown')}
+                          data-testid={`badge-status-${contact.id}`}
+                        >
+                          {formatSupporterStatus(contact.supporterStatus || 'unknown')}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            /* Mobile List View */
+            <div className="divide-y divide-border">
+              {contacts.map((contact: Contact) => (
+                <div key={contact.id} className="p-4" data-testid={`card-contact-${contact.id}`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Name and ID */}
+                      <div className="mb-2">
+                        <h4 className="font-medium text-base truncate" data-testid={`text-name-${contact.id}`}>
                           {contact.fullName}
-                        </p>
+                        </h4>
                         <p className="text-sm text-muted-foreground">
                           ID: {contact.systemId}
                         </p>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm" data-testid={`text-age-${contact.id}`}>
-                      {calculateAge(contact.dateOfBirth) || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="text-sm">{contact.city || 'N/A'}</p>
-                        <p className="text-sm text-muted-foreground">{contact.zipCode || 'N/A'}</p>
+                      
+                      {/* Status and Party Badges */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Badge 
+                          className={getSupporterStatusColor(contact.supporterStatus || 'unknown')}
+                          data-testid={`badge-status-${contact.id}`}
+                        >
+                          {formatSupporterStatus(contact.supporterStatus || 'unknown')}
+                        </Badge>
+                        <Badge variant="outline" className={`${getPartyColor(contact.party)} border-current`}>
+                          {formatParty(contact.party)}
+                        </Badge>
                       </div>
-                    </td>
-                    <td className="px-6 py-4" data-testid={`text-party-${contact.id}`}>
-                      <span className={`text-sm font-medium ${getPartyColor(contact.party)}`}>
-                        {formatParty(contact.party)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        {(contact as any).manualPhoneCount > 0 ? (
-                          <Phone className="w-3 h-3 text-green-600" />
-                        ) : (
-                          <Phone className="w-3 h-3 text-gray-300" />
-                        )}
-                        {(contact as any).manualEmailCount > 0 ? (
-                          <Mail className="w-3 h-3 text-blue-600" />
-                        ) : (
-                          <Mail className="w-3 h-3 text-gray-300" />
-                        )}
+                      
+                      {/* Location, Age, Contact Icons */}
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <span data-testid={`text-age-${contact.id}`}>
+                          Age: {calculateAge(contact.dateOfBirth) || 'N/A'}
+                        </span>
+                        <span>
+                          {contact.city || 'N/A'}, {contact.zipCode || 'N/A'}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {(contact as any).manualPhoneCount > 0 ? (
+                            <Phone className="w-3 h-3 text-green-600" />
+                          ) : (
+                            <Phone className="w-3 h-3 text-gray-300" />
+                          )}
+                          {(contact as any).manualEmailCount > 0 ? (
+                            <Mail className="w-3 h-3 text-blue-600" />
+                          ) : (
+                            <Mail className="w-3 h-3 text-gray-300" />
+                          )}
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {contact.updatedAt ? new Date(contact.updatedAt).toLocaleDateString() : 'Never'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge 
-                        className={getSupporterStatusColor(contact.supporterStatus || 'unknown')}
-                        data-testid={`badge-status-${contact.id}`}
-                      >
-                        {formatSupporterStatus(contact.supporterStatus || 'unknown')}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    
+                    {/* View Button */}
+                    <Button
+                      onClick={() => onContactSelect(contact)}
+                      size="default"
+                      className="h-11 px-4 shrink-0"
+                      data-testid={`button-view-${contact.id}`}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           
           {/* Pagination */}
           <div className="px-6 py-4 border-t border-border">
-            <div className="flex items-center justify-between">
+            <div className={`${isMobile ? 'flex flex-col space-y-3' : 'flex items-center justify-between'}`}>
               <p className="text-sm text-muted-foreground">
                 Showing <span className="font-medium">{((currentPage - 1) * limit) + 1}-{Math.min(currentPage * limit, total)}</span> of <span className="font-medium">{total}</span> results
               </p>
-              <div className="flex items-center space-x-2">
+              <div className={`flex items-center ${isMobile ? 'justify-center' : ''} gap-2`}>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
+                  className={isMobile ? "h-11 px-4" : ""}
                   data-testid="button-previous"
                 >
                   Previous
                 </Button>
                 
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                {!isMobile && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const pageNum = i + 1;
                   return (
                     <Button
@@ -261,7 +334,14 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                   );
                 })}
                 
-                {totalPages > 5 && (
+                {/* Mobile: Show current page info */}
+                {isMobile && (
+                  <span className="px-4 py-2 text-sm font-medium text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                )}
+                
+                {!isMobile && totalPages > 5 && (
                   <>
                     <span className="px-2 text-muted-foreground">...</span>
                     <Button
@@ -277,9 +357,10 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                 
                 <Button
                   variant="outline"
-                  size="sm"
+                  size={isMobile ? "default" : "sm"}
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
+                  className={isMobile ? "h-11 px-4" : ""}
                   data-testid="button-next"
                 >
                   Next
