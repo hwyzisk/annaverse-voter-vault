@@ -34,6 +34,7 @@ export interface IStorage {
   searchContacts(nameFilters?: { firstName?: string; middleName?: string; lastName?: string; }, filters?: any, limit?: number, offset?: number): Promise<{ contacts: Contact[], total: number }>;
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: string, updates: UpdateContact, userId: string): Promise<Contact>;
+  batchInsertContacts(records: any[], userId: string): Promise<void>;
   
   // Contact details
   getContactAliases(contactId: string): Promise<ContactAlias[]>;
@@ -267,6 +268,47 @@ export class DatabaseStorage implements IStorage {
       .where(eq(contacts.id, id))
       .returning();
     return updated;
+  }
+
+  async batchInsertContacts(records: any[], userId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Batch insert contacts
+      const contactsToInsert = records.map(record => record.contact);
+      const insertedContacts = await tx.insert(contacts).values(contactsToInsert).returning();
+      
+      // Batch insert phones and aliases using the returned contact IDs
+      const phonesToInsert: InsertContactPhone[] = [];
+      const aliasesToInsert: InsertContactAlias[] = [];
+      
+      insertedContacts.forEach((contact, index) => {
+        const record = records[index];
+        
+        // Add baseline phone if exists
+        if (record.phone) {
+          phonesToInsert.push({
+            ...record.phone,
+            contactId: contact.id
+          });
+        }
+        
+        // Add baseline alias if exists
+        if (record.alias) {
+          aliasesToInsert.push({
+            ...record.alias,
+            contactId: contact.id
+          });
+        }
+      });
+      
+      // Batch insert phones and aliases
+      if (phonesToInsert.length > 0) {
+        await tx.insert(contactPhones).values(phonesToInsert);
+      }
+      
+      if (aliasesToInsert.length > 0) {
+        await tx.insert(contactAliases).values(aliasesToInsert);
+      }
+    });
   }
 
   // Contact aliases

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { searchService } from "./services/searchService";
 import { excelService } from "./services/excelService";
+import { excelBatchService } from "./services/excelBatchService";
 import { auditService } from "./services/auditService";
 import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactAliasSchema } from "@shared/schema";
 import { z } from "zod";
@@ -451,21 +452,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Empty file not allowed" });
       }
 
-      // Log security audit for file upload
-      console.log(`Excel import initiated by admin ${req.currentUser.email}: ${req.file.originalname} (${req.file.size} bytes)`);
+      // Log basic import info (no audit trail as per user requirements)
+      console.log(`Excel batch import started by ${req.currentUser.email}: ${req.file.originalname} (${req.file.size} bytes)`);
 
-      const result = await excelService.processExcelFile(req.file.buffer, req.currentUser.id);
+      const result = await excelBatchService.processExcelFileStream(req.file.buffer, req.currentUser.id);
       
-      // Log completion audit
-      console.log(`Excel import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);
-      
-      // Log audit trail for Excel import
-      await auditService.logExcelImport(
-        req.currentUser.id, 
-        req.file.originalname, 
-        req.file.size, 
-        result
-      );
+      // Log completion info
+      console.log(`Excel batch import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);
       
       res.json(result);
     } catch (error) {
@@ -555,22 +548,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: "File integrity check failed" });
       }
       
-      // Log security audit for attached file processing
-      console.log(`Secure attached Excel import initiated by admin ${req.currentUser.email}: ${filename} (${buffer.length} bytes)`);
+      // Log basic import info (no audit trail as per user requirements)
+      console.log(`Attached Excel batch import started by ${req.currentUser.email}: ${filename} (${buffer.length} bytes)`);
       
-      // Process the Excel file using existing service
-      const result = await excelService.processExcelFile(buffer, req.currentUser.id);
+      // Process the Excel file using new batch service
+      const result = await excelBatchService.processExcelFileStream(buffer, req.currentUser.id);
       
-      // Log completion audit
-      console.log(`Attached Excel import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);
-      
-      // Log audit trail for attached Excel import
-      await auditService.logExcelImport(
-        req.currentUser.id, 
-        filename, 
-        buffer.length, 
-        result
-      );
+      // Log completion info
+      console.log(`Attached Excel batch import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);
       
       res.json(result);
     } catch (error) {
