@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 import { apiRequest } from "@/lib/queryClient";
 import { ArrowLeft, Download, Users as UsersIcon, Plus, Edit, Trash2, Check, X, Upload, Database, Save, CheckCircle, Trash, Settings as SettingsIcon } from "lucide-react";
 import type { User } from "@shared/schema";
@@ -29,6 +30,17 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
   const [activeTab, setActiveTab] = useState("users");
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    totalRows: number;
+    processed: number;
+    duplicates: number;
+    errors: number;
+    currentChunk: number;
+    totalChunks: number;
+    phase: string;
+    percentage: number;
+  } | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUserData, setNewUserData] = useState({ email: "", firstName: "", lastName: "", role: "viewer" });
@@ -125,10 +137,62 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
     },
   });
 
+  const generateUploadId = () => {
+    return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  };
+
+  const connectToProgressStream = (uploadId: string) => {
+    const eventSource = new EventSource(`/api/admin/upload-progress/${uploadId}`);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'progress') {
+          const percentage = data.totalRows > 0 ? Math.round((data.processed / data.totalRows) * 100) : 0;
+          setUploadProgress({
+            ...data,
+            percentage
+          });
+        } else if (data.type === 'completed') {
+          setUploadProgress(null);
+          setIsUploading(false);
+          toast({
+            title: "Excel Import Complete",
+            description: `Processed ${data.result.processed} contacts. ${data.result.errors.length} errors.`,
+          });
+          setExcelFile(null);
+        } else if (data.type === 'error') {
+          setUploadProgress(null);
+          setIsUploading(false);
+          toast({
+            title: "Upload Failed",
+            description: data.message || "Failed to process Excel file",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error parsing SSE data:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      eventSource.close();
+    };
+  };
+
   const handleExcelUpload = async () => {
     if (!excelFile) return;
 
+    const uploadId = generateUploadId();
     setIsUploading(true);
+    setUploadProgress(null);
+    
+    // Connect to progress stream before starting upload
+    connectToProgressStream(uploadId);
+
     try {
       const formData = new FormData();
       formData.append('excel', excelFile);
@@ -137,27 +201,41 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
         method: 'POST',
         body: formData,
         credentials: 'include',
+        headers: {
+          'X-Upload-ID': uploadId
+        }
       });
 
-      if (!response.ok) throw new Error('Upload failed');
-
-      const result = await response.json();
-      toast({
-        title: "Excel Import Complete",
-        description: `Processed ${result.processed} contacts. ${result.errors.length} errors.`,
-      });
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
       
-      setExcelFile(null);
+      // The SSE connection will handle the response
     } catch (error) {
+      setIsUploading(false);
+      setUploadProgress(null);
       toast({
         title: "Upload Failed",
         description: "Failed to process Excel file",
         variant: "destructive",
       });
-    } finally {
-      setIsUploading(false);
+      
+      // Close SSE connection on error
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
     }
   };
+
+  // Cleanup SSE connection on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, []);
 
   const content = (
     <div className="flex flex-col h-full">
@@ -756,6 +834,39 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                       <p className="text-sm mt-2 font-medium">{excelFile.name}</p>
                     )}
                   </div>
+                  {/* Progress Bar */}
+                  {uploadProgress && (
+                    <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-medium">
+                          {uploadProgress.phase === 'processing' ? 'Processing Data' : 'Importing'}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {uploadProgress.percentage}%
+                        </span>
+                      </div>
+                      <Progress value={uploadProgress.percentage} className="h-2" />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>
+                          Chunk {uploadProgress.currentChunk} of {uploadProgress.totalChunks}
+                        </span>
+                        <span>
+                          {uploadProgress.processed} / {uploadProgress.totalRows} records
+                        </span>
+                      </div>
+                      {uploadProgress.duplicates > 0 && (
+                        <div className="text-xs text-amber-600">
+                          {uploadProgress.duplicates} duplicates found
+                        </div>
+                      )}
+                      {uploadProgress.errors > 0 && (
+                        <div className="text-xs text-red-600">
+                          {uploadProgress.errors} errors encountered
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <Button
                     onClick={handleExcelUpload}
                     disabled={!excelFile || isUploading}
@@ -765,7 +876,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                     {isUploading ? (
                       <>
                         <i className="fas fa-spinner fa-spin mr-2"></i>
-                        Processing...
+                        {uploadProgress ? `Processing... ${uploadProgress.percentage}%` : 'Starting...'}
                       </>
                     ) : (
                       <>

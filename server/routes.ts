@@ -505,7 +505,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Excel seeding endpoint with enhanced security
+  // Progress tracking for active uploads
+  const activeUploads = new Map<string, any>();
+
+  // Server-Sent Events endpoint for upload progress
+  app.get('/api/admin/upload-progress/:uploadId', isAuthenticated, requireRole(['admin']), (req: any, res: any) => {
+    const uploadId = req.params.uploadId;
+    
+    // Set up SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    // Send initial connection message
+    res.write(`data: ${JSON.stringify({ type: 'connected', uploadId })}\n\n`);
+
+    // Store the response object for this upload
+    activeUploads.set(uploadId, res);
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+      activeUploads.delete(uploadId);
+    });
+  });
+
+  // Excel seeding endpoint with enhanced security and progress reporting
   app.post('/api/admin/seed-excel', isAuthenticated, requireRole(['admin']), (req: any, res: any, next: any) => {
     // Custom upload handler with enhanced error handling
     upload.single('excel')(req, res, (err: any) => {
@@ -524,6 +552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next();
     });
   }, async (req: any, res) => {
+    const uploadId = req.headers['x-upload-id'] || 'default';
+    
     try {
       if (!req.file) {
         return res.status(400).json({ 
@@ -541,7 +571,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log basic import info (no audit trail as per user requirements)
       console.log(`Excel batch import started by ${req.currentUser.email}: ${req.file.originalname} (${req.file.size} bytes)`);
 
-      const result = await excelBatchService.processExcelFileStream(req.file.buffer, req.currentUser.id);
+      // Progress callback to send updates via SSE
+      const progressCallback = (progress: any) => {
+        const sseRes = activeUploads.get(uploadId);
+        if (sseRes) {
+          sseRes.write(`data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`);
+        }
+      };
+
+      const result = await excelBatchService.processExcelFileStream(
+        req.file.buffer, 
+        req.currentUser.id,
+        progressCallback
+      );
+      
+      // Send completion event via SSE
+      const sseRes = activeUploads.get(uploadId);
+      if (sseRes) {
+        sseRes.write(`data: ${JSON.stringify({ type: 'completed', result })}\n\n`);
+        sseRes.end();
+        activeUploads.delete(uploadId);
+      }
       
       // Log completion info
       console.log(`Excel batch import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);
@@ -549,6 +599,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error("Error processing Excel file:", error);
+      
+      // Send error event via SSE
+      const sseRes = activeUploads.get(uploadId);
+      if (sseRes) {
+        sseRes.write(`data: ${JSON.stringify({ type: 'error', message: 'Processing failed' })}\n\n`);
+        sseRes.end();
+        activeUploads.delete(uploadId);
+      }
       
       // Enhanced error response with security considerations
       if (error instanceof Error) {
