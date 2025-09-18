@@ -25,6 +25,9 @@ export default function RegisterPage() {
       lastName: "",
       phone: "",
       address: "",
+      city: "",
+      state: "",
+      zipCode: "",
       dateOfBirth: "",
       password: "",
       confirmPassword: "",
@@ -40,6 +43,9 @@ export default function RegisterPage() {
         lastName: data.lastName,
         phone: data.phone,
         address: data.address,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
         dateOfBirth: data.dateOfBirth,
         password: data.password,
       });
@@ -209,12 +215,11 @@ export default function RegisterPage() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address *</FormLabel>
+                    <FormLabel>Street Address *</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Enter your full address" 
+                      <Input 
+                        placeholder="123 Main Street" 
                         data-testid="input-address"
-                        className="resize-none" 
                         {...field}
                         value={field.value || ""}
                       />
@@ -223,6 +228,63 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Orlando" 
+                          data-testid="input-city"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="FL" 
+                          data-testid="input-state"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="zipCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>ZIP Code *</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="32801" 
+                          data-testid="input-zip-code"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}

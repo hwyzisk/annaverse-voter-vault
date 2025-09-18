@@ -20,7 +20,6 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
     lastName: ""
   });
   const [advancedFilters, setAdvancedFilters] = useState({
-    city: "",
     zipCode: "",
     ageMin: "",
     ageMax: "",
@@ -55,7 +54,6 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
 
   const clearAllFilters = () => {
     setAdvancedFilters({
-      city: "",
       zipCode: "",
       ageMin: "",
       ageMax: "",
@@ -85,7 +83,6 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
 
   const clearAllDraftFilters = () => {
     setDraftAdvancedFilters({
-      city: "",
       zipCode: "",
       ageMin: "",
       ageMax: "",
@@ -201,16 +198,6 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
               {showAdvanced && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">City</label>
-                    <Input
-                      type="text"
-                      placeholder="Salt Lake City"
-                      value={advancedFilters.city}
-                      onChange={(e) => setAdvancedFilters(prev => ({ ...prev, city: e.target.value }))}
-                      data-testid="input-filter-city"
-                    />
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium mb-1">ZIP Code</label>
                     <Input
                       type="text"
@@ -322,17 +309,6 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
               <div className="space-y-4">
                 <h3 className="text-sm font-medium">Advanced Filters</h3>
                 
-                <div>
-                  <label className="block text-sm font-medium mb-2">City</label>
-                  <Input
-                    type="text"
-                    placeholder="Salt Lake City"
-                    value={draftAdvancedFilters.city}
-                    onChange={(e) => setDraftAdvancedFilters(prev => ({ ...prev, city: e.target.value }))}
-                    data-testid="input-filter-city-mobile"
-                    className="h-12"
-                  />
-                </div>
                 
                 <div>
                   <label className="block text-sm font-medium mb-2">ZIP Code</label>

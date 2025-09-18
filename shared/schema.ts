@@ -36,6 +36,9 @@ export const users = pgTable("users", {
   passwordHash: varchar("password_hash"), // For email/password authentication
   phone: varchar("phone"),
   address: text("address"),
+  city: varchar("city"),
+  state: varchar("state"),
+  zipCode: varchar("zip_code"),
   dateOfBirth: date("date_of_birth"),
   status: varchar("status", { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'), // Default pending for approval workflow
   invitationToken: varchar("invitation_token"), // For password reset/invitation links
@@ -207,6 +210,9 @@ export const upsertUserSchema = insertUserSchema.pick({
   passwordHash: true,
   phone: true,
   address: true,
+  city: true,
+  state: true,
+  zipCode: true,
   dateOfBirth: true,
   status: true,
   invitationToken: true,
@@ -248,6 +254,9 @@ export const registrationSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required"),
   phone: z.string().trim().min(1, "Phone number is required"),
   address: z.string().trim().min(1, "Address is required"),
+  city: z.string().trim().min(1, "City is required"),
+  state: z.string().trim().min(1, "State is required"),
+  zipCode: z.string().trim().min(1, "ZIP code is required"),
   dateOfBirth: z.string().min(1, "Date of birth is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),

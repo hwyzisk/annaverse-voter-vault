@@ -10,6 +10,9 @@ export interface RegisterUserData {
   lastName: string;
   phone: string;
   address: string;
+  city: string;
+  state: string;
+  zipCode: string;
   dateOfBirth: string; // YYYY-MM-DD format
   password: string;
 }
@@ -48,20 +51,22 @@ export class AuthService {
       // Hash password
       const passwordHash = await this.hashPassword(userData.password);
 
-      // Create user with pending status
+      // Create user with pending status - omit ID to let DB generate UUID
       const newUser = await storage.upsertUser({
-        // Don't pass id, let DB generate UUID
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
         passwordHash,
         phone: userData.phone,
         address: userData.address,
+        city: userData.city,
+        state: userData.state,
+        zipCode: userData.zipCode,
         dateOfBirth: userData.dateOfBirth, // Keep as string, will be converted by DB
         status: 'pending',
         role: 'viewer', // Default role, admin can change during approval
         isActive: false, // Inactive until approved
-      });
+      } as any);
 
       // Send confirmation email to user
       const userFullName = `${userData.firstName} ${userData.lastName}`;
