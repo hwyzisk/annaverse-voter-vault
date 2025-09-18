@@ -209,7 +209,9 @@ export class DatabaseStorage implements IStorage {
             createdBy: contacts.createdBy,
             lastUpdatedBy: contacts.lastUpdatedBy,
             phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
-            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`
+            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`,
+            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.isManuallyAdded} = true)`,
+            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.isManuallyAdded} = true)`
           }).from(contacts)
             .where(whereClause)
             .limit(limit)
@@ -240,7 +242,9 @@ export class DatabaseStorage implements IStorage {
             createdBy: contacts.createdBy,
             lastUpdatedBy: contacts.lastUpdatedBy,
             phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
-            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`
+            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`,
+            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.isManuallyAdded} = true)`,
+            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.isManuallyAdded} = true)`
           }).from(contacts)
             .limit(limit)
             .offset(offset)

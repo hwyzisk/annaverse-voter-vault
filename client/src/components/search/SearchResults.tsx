@@ -196,12 +196,12 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
-                        {(contact as any).phoneCount > 0 ? (
+                        {(contact as any).manualPhoneCount > 0 ? (
                           <Phone className="w-3 h-3 text-green-600" />
                         ) : (
                           <Phone className="w-3 h-3 text-gray-300" />
                         )}
-                        {(contact as any).emailCount > 0 ? (
+                        {(contact as any).manualEmailCount > 0 ? (
                           <Mail className="w-3 h-3 text-blue-600" />
                         ) : (
                           <Mail className="w-3 h-3 text-gray-300" />
