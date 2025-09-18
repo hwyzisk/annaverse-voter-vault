@@ -32,6 +32,15 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  // New fields for registration and approval workflow
+  passwordHash: varchar("password_hash"), // For email/password authentication
+  phone: varchar("phone"),
+  address: text("address"),
+  dateOfBirth: date("date_of_birth"),
+  status: varchar("status", { enum: ['pending', 'approved', 'rejected'] }).notNull().default('approved'), // Default approved for existing users
+  invitationToken: varchar("invitation_token"), // For password reset/invitation links
+  tokenExpiresAt: timestamp("token_expires_at"), // Token expiration
+  // Existing fields
   role: varchar("role", { enum: ['admin', 'editor', 'viewer'] }).notNull().default('viewer'),
   isActive: boolean("is_active").notNull().default(true),
   lastLoginAt: timestamp("last_login_at"),
@@ -195,6 +204,15 @@ export const upsertUserSchema = insertUserSchema.pick({
   firstName: true,
   lastName: true,
   profileImageUrl: true,
+  passwordHash: true,
+  phone: true,
+  address: true,
+  dateOfBirth: true,
+  status: true,
+  invitationToken: true,
+  tokenExpiresAt: true,
+  role: true,
+  isActive: true,
   lastLoginAt: true,
 }).extend({
   updatedAt: z.date().optional(),

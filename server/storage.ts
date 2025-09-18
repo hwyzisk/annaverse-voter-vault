@@ -26,6 +26,9 @@ import { eq, desc, and, sql, ilike, or, count } from "drizzle-orm";
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  getAdminUsers(): Promise<User[]>;
   upsertUser(user: UpsertUser): Promise<User>;
   
   // Contact operations
@@ -75,6 +78,21 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.invitationToken, token));
+    return user;
+  }
+
+  async getAdminUsers(): Promise<User[]> {
+    const adminUsers = await db.select().from(users).where(eq(users.role, 'admin'));
+    return adminUsers;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -145,7 +163,7 @@ export class DatabaseStorage implements IStorage {
 
     if (filters?.supporterStatus) {
       // Handle comma-separated supporter status values
-      const supporterStatuses = filters.supporterStatus.split(',').map((s: any) => s.trim());
+      const supporterStatuses = filters.supporterStatus.split(',').map((s: string) => s.trim());
       if (supporterStatuses.length > 1) {
         whereConditions.push(sql`${contacts.supporterStatus} IN (${sql.join(supporterStatuses.map(s => sql`${s}`), sql`, `)})`);
       } else {
