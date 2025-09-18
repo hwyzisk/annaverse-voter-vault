@@ -90,7 +90,7 @@ export default function RegisterPage() {
                     <li>Check your email for a confirmation message</li>
                     <li>An administrator will review your application</li>
                     <li>You'll receive an email once your account is approved</li>
-                    <li>You can then log in and start using VoterVault</li>
+                    <li>You can then log in and start using AnnaVerse</li>
                   </ol>
                 </div>
               </div>
@@ -114,7 +114,7 @@ export default function RegisterPage() {
         <CardHeader>
           <div className="flex items-center space-x-2">
             <UserPlus className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            <CardTitle className="text-2xl">Join VoterVault</CardTitle>
+            <CardTitle className="text-2xl">Join AnnaVerse</CardTitle>
           </div>
           <CardDescription>
             Create your account to access the voter contact directory. Your application will be reviewed by an administrator.

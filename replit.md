@@ -1,6 +1,6 @@
 # Overview
 
-VoterVault is a comprehensive contact management system designed for political organizations and campaigns. It provides secure, role-based access to voter and supporter databases with advanced search capabilities, audit tracking, and multi-user collaboration features. The application allows users to search contacts using intelligent name matching (including nicknames), manage contact details, import data from Excel files, and maintain complete audit trails of all changes.
+AnnaVerse (formerly VoterVault) is a comprehensive contact management system designed for political organizations and campaigns. It provides secure, role-based access to voter and supporter databases with advanced search capabilities, audit tracking, and multi-user collaboration features. The application allows users to search contacts using intelligent name matching (including nicknames), manage contact details, import data from Excel files, and maintain complete audit trails of all changes.
 
 # User Preferences
 

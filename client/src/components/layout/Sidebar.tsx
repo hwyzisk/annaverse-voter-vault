@@ -1,6 +1,7 @@
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon } from "lucide-react";
+import annaVerseIcon from "@assets/AnnaVerse_1758230016506.png";
 
 interface SidebarProps {
   user: User;
@@ -29,10 +30,14 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
     <aside className="w-64 bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Vote className="w-4 h-4 text-primary-foreground" />
+          <div className="w-8 h-8 rounded-full overflow-hidden">
+            <img 
+              src={annaVerseIcon} 
+              alt="AnnaVerse"
+              className="w-full h-full object-cover"
+            />
           </div>
-          <h1 className="text-xl font-bold text-foreground">VoterVault</h1>
+          <h1 className="text-xl font-bold text-foreground">AnnaVerse</h1>
         </div>
       </div>
       
