@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Download, Users as UsersIcon, Plus, Edit, Trash2, Check, X } from "lucide-react";
+import { ArrowLeft, Download, Users as UsersIcon, Plus, Edit, Trash2, Check, X, Upload, Database, Save, CheckCircle, Trash, Settings as SettingsIcon } from "lucide-react";
 import type { User } from "@shared/schema";
 
 interface AdminDashboardProps {
@@ -29,6 +32,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUserData, setNewUserData] = useState({ email: "", firstName: "", lastName: "", role: "viewer" });
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -446,11 +450,9 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
               {/* Add User Dialog */}
               <Dialog open={showAddUser} onOpenChange={setShowAddUser}>
                 <DialogContent className="sm:max-w-md">
+                  <DialogTitle>Add New User</DialogTitle>
+                  <DialogDescription>Create a new user account</DialogDescription>
                   <div className="space-y-6">
-                    <div>
-                      <h3 className="text-lg font-semibold">Add New User</h3>
-                      <p className="text-sm text-muted-foreground">Create a new user account</p>
-                    </div>
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="email">Email Address *</Label>
@@ -825,9 +827,569 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
     return <div className="min-h-screen bg-background">{content}</div>;
   }
 
+  // Mobile Sheet Layout
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+        <SheetContent className="w-full sm:max-w-none p-0 overflow-hidden flex flex-col">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Admin Dashboard</SheetTitle>
+            <SheetDescription>Administrative controls and system management</SheetDescription>
+          </SheetHeader>
+          
+          {/* Mobile Sticky Header */}
+          <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="ghost"
+                  size="default"
+                  onClick={onClose}
+                  className="h-11 w-11 p-0"
+                  data-testid="button-close-admin"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </Button>
+                <div>
+                  <h2 className="text-lg font-semibold">Admin Dashboard</h2>
+                  <p className="text-sm text-muted-foreground">System Management</p>
+                </div>
+              </div>
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                Operational
+              </Badge>
+            </div>
+          </div>
+
+          {/* Mobile Content */}
+          <div className="flex-1 overflow-auto">
+            {/* System Stats - Mobile Grid */}
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <UsersIcon className="w-6 h-6 text-primary mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Contacts</p>
+                      <p className="text-xl font-bold" data-testid="stat-total-contacts">
+                        {statsLoading ? '-' : stats?.totalContacts?.toLocaleString() || '0'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Active Users</p>
+                      <p className="text-xl font-bold" data-testid="stat-active-users">
+                        {statsLoading ? '-' : stats?.activeUsers || '0'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <Edit className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Edits Today</p>
+                      <p className="text-xl font-bold" data-testid="stat-edits-today">
+                        {statsLoading ? '-' : stats?.editsToday || '0'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <CheckCircle className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Data Quality</p>
+                      <p className="text-xl font-bold text-green-600" data-testid="stat-data-quality">
+                        {statsLoading ? '-' : `${stats?.dataQuality || '0'}%`}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Full Mobile Admin Sections as Accordion */}
+            <Accordion type="multiple" defaultValue={["users"]} className="px-4">
+              {/* Users Section */}
+              <AccordionItem value="users">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  <div className="flex items-center gap-2">
+                    <UsersIcon className="w-5 h-5" />
+                    User Management
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  <div className="space-y-4">
+                    <Button 
+                      onClick={() => setShowAddUser(true)} 
+                      className="w-full h-11"
+                      data-testid="button-add-user"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add New User
+                    </Button>
+                    
+                    {usersLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
+                        <p className="mt-2 text-muted-foreground">Loading users...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {users?.map((userItem) => (
+                          <Card key={userItem.id} className="p-4">
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-medium text-base" data-testid={`user-name-${userItem.id}`}>
+                                    {userItem.firstName || userItem.lastName 
+                                      ? `${userItem.firstName || ''} ${userItem.lastName || ''}`.trim()
+                                      : 'No name set'}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground truncate" data-testid={`user-email-${userItem.id}`}>
+                                    {userItem.email}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground" data-testid={`user-last-login-${userItem.id}`}>
+                                    Last login: {userItem.lastLoginAt 
+                                      ? new Date(userItem.lastLoginAt).toLocaleDateString()
+                                      : 'Never'}
+                                  </p>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  <Badge 
+                                    variant={userItem.role === 'admin' ? 'default' : userItem.role === 'editor' ? 'secondary' : 'outline'}
+                                    data-testid={`user-role-${userItem.id}`}
+                                  >
+                                    {userItem.role.charAt(0).toUpperCase() + userItem.role.slice(1)}
+                                  </Badge>
+                                  <Badge 
+                                    variant={userItem.isActive ? 'default' : 'secondary'}
+                                    className={userItem.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}
+                                    data-testid={`user-status-${userItem.id}`}
+                                  >
+                                    {userItem.isActive ? 'Active' : 'Inactive'}
+                                  </Badge>
+                                </div>
+                              </div>
+                              
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="default"
+                                  onClick={() => setEditingUser(userItem)}
+                                  disabled={editingUser?.id === userItem.id}
+                                  className="flex-1 h-11"
+                                  data-testid={`button-edit-user-${userItem.id}`}
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Role
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="default"
+                                  onClick={() => updateUserStatusMutation.mutate({
+                                    userId: userItem.id,
+                                    isActive: !userItem.isActive
+                                  })}
+                                  disabled={updateUserStatusMutation.isPending || userItem.id === user.id}
+                                  className="flex-1 h-11"
+                                  data-testid={`button-toggle-status-${userItem.id}`}
+                                >
+                                  {userItem.isActive ? 'Deactivate' : 'Activate'}
+                                </Button>
+                                {userItem.id !== user.id && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="destructive"
+                                        size="default"
+                                        className="h-11 w-11 p-0"
+                                        data-testid={`button-delete-user-${userItem.id}`}
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete this user? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => deleteUserMutation.mutate(userItem.id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
+                              
+                              {/* Role Editing */}
+                              {editingUser?.id === userItem.id && (
+                                <div className="pt-3 border-t space-y-3">
+                                  <Label className="text-sm font-medium">Change Role</Label>
+                                  <Select 
+                                    value={editingUser.role}
+                                    onValueChange={(role) => setEditingUser({...editingUser, role: role as any})}
+                                  >
+                                    <SelectTrigger className="h-11">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="admin">Admin - Full access</SelectItem>
+                                      <SelectItem value="editor">Editor - Can edit contacts</SelectItem>
+                                      <SelectItem value="viewer">Viewer - Read only</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <div className="flex gap-2">
+                                    <Button 
+                                      size="default"
+                                      onClick={() => updateUserRoleMutation.mutate({
+                                        userId: userItem.id,
+                                        role: editingUser.role
+                                      })}
+                                      disabled={updateUserRoleMutation.isPending}
+                                      className="flex-1 h-11"
+                                      data-testid={`button-save-role-${userItem.id}`}
+                                    >
+                                      <Check className="w-4 h-4 mr-2" />
+                                      Save Role
+                                    </Button>
+                                    <Button 
+                                      variant="outline"
+                                      size="default"
+                                      onClick={() => setEditingUser(null)}
+                                      className="flex-1 h-11"
+                                      data-testid={`button-cancel-edit-${userItem.id}`}
+                                    >
+                                      <X className="w-4 h-4 mr-2" />
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Audit Logs Section */}
+              <AccordionItem value="audit">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-5 h-5" />
+                    Audit Logs
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  {auditLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
+                      <p className="mt-2 text-muted-foreground">Loading audit logs...</p>
+                    </div>
+                  ) : auditLogs && auditLogs.length > 0 ? (
+                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                      {auditLogs.map((log) => (
+                        <Card key={log.id} className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-medium">
+                                    {log.user?.firstName?.charAt(0) || log.user?.email?.charAt(0) || 'U'}
+                                  </span>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium">
+                                    {log.user?.firstName && log.user?.lastName 
+                                      ? `${log.user.firstName} ${log.user.lastName}`
+                                      : log.user?.firstName || log.user?.lastName || 'Unknown User'}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {log.user?.email || 'No email'}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge 
+                                variant={
+                                  log.action === 'create' ? 'default' : 
+                                  log.action === 'update' ? 'secondary' : 
+                                  log.action === 'delete' ? 'destructive' : 'outline'
+                                }
+                                data-testid={`audit-action-${log.id}`}
+                              >
+                                {log.action.charAt(0).toUpperCase() + log.action.slice(1)}
+                              </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Table</Label>
+                                <p className="text-sm font-mono bg-muted px-2 py-1 rounded">{log.tableName}</p>
+                              </div>
+                              <div>
+                                <Label className="text-xs text-muted-foreground">Field</Label>
+                                <p className="text-sm">{log.fieldName || '-'}</p>
+                              </div>
+                            </div>
+                            
+                            {(log.oldValue || log.newValue) && (
+                              <div className="space-y-2">
+                                {log.oldValue && (
+                                  <div>
+                                    <Label className="text-xs text-muted-foreground">Before</Label>
+                                    <p className="text-sm text-red-600 bg-red-50 px-2 py-1 rounded truncate">
+                                      {log.oldValue}
+                                    </p>
+                                  </div>
+                                )}
+                                {log.newValue && (
+                                  <div>
+                                    <Label className="text-xs text-muted-foreground">After</Label>
+                                    <p className="text-sm text-green-600 bg-green-50 px-2 py-1 rounded truncate">
+                                      {log.newValue}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <span data-testid={`audit-timestamp-${log.id}`}>
+                                {new Date(log.createdAt).toLocaleDateString()} at {new Date(log.createdAt).toLocaleTimeString()}
+                              </span>
+                              {log.contact && (
+                                <span className="truncate ml-2" data-testid={`audit-contact-${log.id}`}>
+                                  {log.contact.fullName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Trash2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>No audit logs found</p>
+                      <p className="text-sm mt-2">Changes to contacts will appear here</p>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Settings Section */}
+              <AccordionItem value="settings">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  <div className="flex items-center gap-2">
+                    <SettingsIcon className="w-5 h-5" />
+                    Settings
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-6 space-y-6">
+                  {/* Field Permissions */}
+                  <div>
+                    <h4 className="text-base font-medium mb-4">Field Permissions</h4>
+                    <div className="space-y-4">
+                      {[
+                        { field: 'Phone Numbers', key: 'phones' },
+                        { field: 'Email Addresses', key: 'emails' },
+                        { field: 'Notes', key: 'notes' },
+                        { field: 'Aliases', key: 'aliases' },
+                        { field: 'Supporter Status', key: 'supporter_status' },
+                        { field: 'District Info', key: 'districts' },
+                      ].map((permission) => (
+                        <div key={permission.key} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <Label className="text-base font-medium">
+                            {permission.field}
+                          </Label>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              defaultChecked={true}
+                              data-testid={`toggle-${permission.key}`}
+                            />
+                            <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-primary"></div>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <Button className="w-full mt-4 h-11" data-testid="button-save-permissions">
+                      Save Permissions
+                    </Button>
+                  </div>
+
+                  {/* System Settings */}
+                  <div>
+                    <h4 className="text-base font-medium mb-4">System Settings</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Session Timeout (minutes)</Label>
+                        <Input
+                          type="number"
+                          defaultValue="480"
+                          className="h-11 text-base"
+                          data-testid="input-session-timeout"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Max Search Results</Label>
+                        <Input
+                          type="number"
+                          defaultValue="100"
+                          className="h-11 text-base"
+                          data-testid="input-max-results"
+                        />
+                      </div>
+                    </div>
+                    <Button className="w-full mt-4 h-11" data-testid="button-save-settings">
+                      Save Settings
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Data Management Section */}
+              <AccordionItem value="data">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-5 h-5" />
+                    Data Management
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-6 space-y-6">
+                  {/* Excel Import */}
+                  <div>
+                    <h4 className="text-base font-medium mb-4">Excel Data Import</h4>
+                    <div className="border-2 border-dashed border-border rounded-lg p-6 text-center space-y-4">
+                      <div className="w-16 h-16 mx-auto bg-green-100 rounded-lg flex items-center justify-center">
+                        <Upload className="w-8 h-8 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="text-base font-medium mb-2">Upload Excel File</p>
+                        <p className="text-sm text-muted-foreground">
+                          Import contact data from Excel spreadsheet
+                        </p>
+                      </div>
+                      
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                        id="mobile-excel-upload"
+                        data-testid="input-excel-file"
+                      />
+                      <Label
+                        htmlFor="mobile-excel-upload"
+                        className="inline-block w-full"
+                      >
+                        <Button variant="outline" className="w-full h-11">
+                          <Upload className="w-4 h-4 mr-2" />
+                          Choose Excel File
+                        </Button>
+                      </Label>
+                      
+                      {excelFile && (
+                        <p className="text-sm font-medium bg-muted p-2 rounded">
+                          Selected: {excelFile.name}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <Button
+                      onClick={handleExcelUpload}
+                      disabled={!excelFile || isUploading}
+                      className="w-full h-12 mt-4"
+                      data-testid="button-upload-excel"
+                    >
+                      {isUploading ? (
+                        <div className="flex items-center">
+                          <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                          Processing...
+                        </div>
+                      ) : (
+                        <>
+                          <Database className="w-4 h-4 mr-2" />
+                          Import Data
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Database Operations */}
+                  <div>
+                    <h4 className="text-base font-medium mb-4">Database Operations</h4>
+                    <div className="space-y-3">
+                      <Button
+                        variant="outline"
+                        className="w-full h-11 justify-start"
+                        data-testid="button-backup"
+                      >
+                        <Save className="w-4 h-4 mr-3" />
+                        Create System Backup
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full h-11 justify-start"
+                        data-testid="button-validate"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-3" />
+                        Run Data Validation
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full h-11 justify-start"
+                        data-testid="button-cleanup"
+                      >
+                        <Trash className="w-4 h-4 mr-3" />
+                        Data Cleanup
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="w-full h-11 justify-start"
+                        data-testid="button-maintenance"
+                      >
+                        <SettingsIcon className="w-4 h-4 mr-3" />
+                        Maintenance Mode
+                      </Button>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop Dialog Layout
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden p-0">
+        <DialogTitle className="sr-only">Admin Dashboard</DialogTitle>
+        <DialogDescription className="sr-only">Administrative controls and system management</DialogDescription>
         {content}
       </DialogContent>
     </Dialog>
