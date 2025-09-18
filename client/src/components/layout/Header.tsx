@@ -4,15 +4,17 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, User as UserIcon, Settings, LogOut } from "lucide-react";
+import { ChevronDown, User as UserIcon, Settings, LogOut, Menu } from "lucide-react";
 
 interface HeaderProps {
   user: User;
   onProfileClick?: () => void;
   onNotificationClick?: () => void;
+  onMobileMenuClick?: () => void;
+  showMobileMenu?: boolean;
 }
 
-export default function Header({ user, onProfileClick, onNotificationClick }: HeaderProps) {
+export default function Header({ user, onProfileClick, onNotificationClick, onMobileMenuClick, showMobileMenu }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   
   const formatName = (user: User) => {
@@ -41,6 +43,19 @@ export default function Header({ user, onProfileClick, onNotificationClick }: He
     <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          {showMobileMenu && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onMobileMenuClick}
+              className="md:hidden"
+              aria-label="Open navigation menu"
+              aria-expanded="false"
+              data-testid="button-mobile-menu"
+            >
+              <Menu className="w-5 h-5" />
+            </Button>
+          )}
           <h2 className="text-lg font-semibold">Contact Search</h2>
           <span className="text-sm text-muted-foreground" data-testid="text-total-contacts">
             Loading contacts...
