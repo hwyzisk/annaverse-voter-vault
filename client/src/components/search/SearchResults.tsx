@@ -46,7 +46,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
       if (filters.zipCode) params.append('zipCode', filters.zipCode);
       if (filters.party && filters.party !== 'all') params.append('party', filters.party);
       if (filters.quickFilters?.includes('supporters')) {
-        params.append('supporterStatus', 'supporter');
+        params.append('supporterStatus', 'confirmed-supporter,likely-supporter');
       }
       
       // Add age range from advanced filters
@@ -77,9 +77,11 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
 
   const getSupporterStatusColor = (status: string) => {
     switch (status) {
-      case 'supporter':
+      case 'confirmed-supporter':
         return 'bg-green-100 text-green-800';
-      case 'non-supporter':
+      case 'likely-supporter':
+        return 'bg-green-50 text-green-700';
+      case 'opposition':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -88,10 +90,12 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
 
   const formatSupporterStatus = (status: string) => {
     switch (status) {
-      case 'supporter':
-        return 'Supporter';
-      case 'non-supporter':
-        return 'Non-Supporter';
+      case 'confirmed-supporter':
+        return 'Confirmed Supporter';
+      case 'likely-supporter':
+        return 'Likely Supporter';
+      case 'opposition':
+        return 'Opposition';
       default:
         return 'Unknown';
     }

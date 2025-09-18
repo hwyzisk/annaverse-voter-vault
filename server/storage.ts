@@ -144,7 +144,13 @@ export class DatabaseStorage implements IStorage {
     }
 
     if (filters?.supporterStatus) {
-      whereConditions.push(eq(contacts.supporterStatus, filters.supporterStatus));
+      // Handle comma-separated supporter status values
+      const supporterStatuses = filters.supporterStatus.split(',').map((s: any) => s.trim());
+      if (supporterStatuses.length > 1) {
+        whereConditions.push(sql`${contacts.supporterStatus} IN (${sql.join(supporterStatuses.map(s => sql`${s}`), sql`, `)})`);
+      } else {
+        whereConditions.push(eq(contacts.supporterStatus, supporterStatuses[0]));
+      }
     }
 
     // Age range filtering
@@ -208,6 +214,7 @@ export class DatabaseStorage implements IStorage {
             party: contacts.party,
             voterStatus: contacts.voterStatus,
             supporterStatus: contacts.supporterStatus,
+            volunteerLikeliness: contacts.volunteerLikeliness,
             notes: contacts.notes,
             createdAt: contacts.createdAt,
             updatedAt: contacts.updatedAt,
@@ -241,6 +248,7 @@ export class DatabaseStorage implements IStorage {
             party: contacts.party,
             voterStatus: contacts.voterStatus,
             supporterStatus: contacts.supporterStatus,
+            volunteerLikeliness: contacts.volunteerLikeliness,
             notes: contacts.notes,
             createdAt: contacts.createdAt,
             updatedAt: contacts.updatedAt,

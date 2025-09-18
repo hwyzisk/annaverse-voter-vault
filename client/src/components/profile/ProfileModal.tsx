@@ -33,7 +33,8 @@ interface ContactDetails extends Contact {
 export default function ProfileModal({ contact, user, isOpen, onClose }: ProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [notes, setNotes] = useState(contact.notes || "");
-  const [supporterStatus, setSupporterStatus] = useState<"supporter" | "non-supporter" | "unknown">(contact.supporterStatus || "unknown");
+  const [supporterStatus, setSupporterStatus] = useState(contact.supporterStatus || "unknown");
+  const [volunteerLikeliness, setVolunteerLikeliness] = useState(contact.volunteerLikeliness || "unknown");
   const [newAlias, setNewAlias] = useState("");
   const [newPhone, setNewPhone] = useState({ phoneNumber: "", phoneType: "mobile" as const });
   const [newEmail, setNewEmail] = useState({ email: "", emailType: "personal" as const });
@@ -212,6 +213,10 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     if (supporterStatus !== contact.supporterStatus) {
       updates.supporterStatus = supporterStatus;
     }
+    
+    if (volunteerLikeliness !== contact.volunteerLikeliness) {
+      updates.volunteerLikeliness = volunteerLikeliness;
+    }
 
     if (Object.keys(updates).length > 0) {
       updateContactMutation.mutate(updates);
@@ -321,15 +326,21 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       data-testid="radio-supporter-status"
                     >
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="supporter" id="supporter" />
-                        <label htmlFor="supporter" className="text-sm font-medium leading-none">
-                          Supporter
+                        <RadioGroupItem value="confirmed-supporter" id="confirmed-supporter" />
+                        <label htmlFor="confirmed-supporter" className="text-sm font-medium leading-none">
+                          Confirmed Supporter
                         </label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="non-supporter" id="non-supporter" />
-                        <label htmlFor="non-supporter" className="text-sm font-medium leading-none">
-                          Non-Supporter
+                        <RadioGroupItem value="likely-supporter" id="likely-supporter" />
+                        <label htmlFor="likely-supporter" className="text-sm font-medium leading-none">
+                          Likely Supporter
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="opposition" id="opposition" />
+                        <label htmlFor="opposition" className="text-sm font-medium leading-none">
+                          Opposition
                         </label>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -342,17 +353,73 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   ) : (
                     <Badge 
                       variant={
-                        details.supporterStatus === 'supporter' ? 'default' : 
-                        details.supporterStatus === 'non-supporter' ? 'destructive' : 'secondary'
+                        details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' : 
+                        details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
                       }
                       data-testid="badge-supporter-status"
                     >
-                      {details.supporterStatus === 'supporter' ? 'Supporter' : 
-                       details.supporterStatus === 'non-supporter' ? 'Non-Supporter' : 'Unknown'}
+                      {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' : 
+                       details.supporterStatus === 'likely-supporter' ? 'Likely Supporter' : 
+                       details.supporterStatus === 'opposition' ? 'Opposition' : 'Unknown'}
                     </Badge>
                   )}
                 </CardContent>
               </Card>
+
+              {/* Volunteer Likeliness */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Likeliness to Volunteer</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {canEdit && isEditing ? (
+                    <RadioGroup 
+                      value={volunteerLikeliness}
+                      onValueChange={(value) => setVolunteerLikeliness(value as any)}
+                      className="flex flex-row space-x-6"
+                      data-testid="radio-volunteer-likeliness"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="confirmed-volunteer" id="confirmed-volunteer" />
+                        <label htmlFor="confirmed-volunteer" className="text-sm font-medium leading-none">
+                          Confirmed Volunteer
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="likely-to-volunteer" id="likely-to-volunteer" />
+                        <label htmlFor="likely-to-volunteer" className="text-sm font-medium leading-none">
+                          Likely To Volunteer
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="will-not-volunteer" id="will-not-volunteer" />
+                        <label htmlFor="will-not-volunteer" className="text-sm font-medium leading-none">
+                          Will Not Volunteer
+                        </label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="unknown" id="volunteer-unknown" />
+                        <label htmlFor="volunteer-unknown" className="text-sm font-medium leading-none">
+                          Unknown
+                        </label>
+                      </div>
+                    </RadioGroup>
+                  ) : (
+                    <Badge 
+                      variant={
+                        details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' : 
+                        details.volunteerLikeliness === 'will-not-volunteer' ? 'destructive' : 'secondary'
+                      }
+                      data-testid="badge-volunteer-likeliness"
+                    >
+                      {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' : 
+                       details.volunteerLikeliness === 'likely-to-volunteer' ? 'Likely To Volunteer' : 
+                       details.volunteerLikeliness === 'will-not-volunteer' ? 'Will Not Volunteer' : 'Unknown'}
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
+              
               {/* Identity Information */}
               <Card>
                   <CardHeader>
