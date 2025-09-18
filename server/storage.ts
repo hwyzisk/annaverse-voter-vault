@@ -180,6 +180,11 @@ export class DatabaseStorage implements IStorage {
       );
     }
 
+    // System ID filtering for duplicate detection
+    if (filters?.systemId) {
+      whereConditions.push(ilike(contacts.systemId, `%${filters.systemId}%`));
+    }
+
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
     const [contactsResult, totalResult] = await Promise.all([
