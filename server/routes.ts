@@ -6,6 +6,7 @@ import { searchService } from "./services/searchService";
 import { excelService } from "./services/excelService";
 import { excelBatchService } from "./services/excelBatchService";
 import { auditService } from "./services/auditService";
+import { AuthService } from "./authService";
 import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactAliasSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -103,6 +104,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Password authentication routes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const result = await AuthService.registerUser(req.body);
+      res.json(result);
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({ success: false, message: 'Registration failed' });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      const result = await AuthService.loginUser({ email, password });
+      
+      if (result.success && result.user) {
+        // Set session or token here (for now just return user data)
+        res.json(result);
+      } else {
+        res.status(401).json(result);
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ success: false, message: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/password-reset', async (req, res) => {
+    try {
+      const { email } = req.body;
+      const result = await AuthService.generatePasswordResetToken(email);
+      res.json(result);
+    } catch (error) {
+      console.error('Password reset error:', error);
+      res.status(500).json({ success: false, message: 'Password reset failed' });
+    }
+  });
+
+  app.post('/api/auth/password-reset/confirm', async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      const result = await AuthService.resetPassword(token, newPassword);
+      res.json(result);
+    } catch (error) {
+      console.error('Password reset confirm error:', error);
+      res.status(500).json({ success: false, message: 'Password reset failed' });
+    }
+  });
+
+  // Admin routes for user management
+  app.get('/api/admin/pending-users', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      const pendingUsers = await storage.getAllUsers();
+      const pending = pendingUsers.filter(user => user.status === 'pending');
+      res.json(pending);
+    } catch (error) {
+      console.error('Error fetching pending users:', error);
+      res.status(500).json({ message: 'Failed to fetch pending users' });
+    }
+  });
+
+  app.post('/api/admin/approve-user/:id', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      const result = await AuthService.approveUser(id, role);
+      res.json(result);
+    } catch (error) {
+      console.error('Error approving user:', error);
+      res.status(500).json({ success: false, message: 'Failed to approve user' });
+    }
+  });
+
+  app.post('/api/admin/reject-user/:id', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = await AuthService.rejectUser(id);
+      res.json(result);
+    } catch (error) {
+      console.error('Error rejecting user:', error);
+      res.status(500).json({ success: false, message: 'Failed to reject user' });
     }
   });
 

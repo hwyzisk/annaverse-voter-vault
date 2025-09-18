@@ -124,8 +124,17 @@ export class AuthService {
         lastLoginAt: new Date(),
       });
 
-      // Return user data (exclude password hash)
-      const { passwordHash, ...safeUser } = user;
+      // Return only safe user fields (explicit whitelist)
+      const safeUser = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        isActive: user.isActive,
+        lastLoginAt: user.lastLoginAt,
+        createdAt: user.createdAt,
+      };
       return { success: true, user: safeUser, message: 'Login successful' };
     } catch (error) {
       console.error('Login error:', error);
@@ -250,8 +259,8 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         passwordHash,
-        invitationToken: undefined, // Use undefined instead of null
-        tokenExpiresAt: undefined, // Use undefined instead of null
+        invitationToken: null, // Explicitly clear the token
+        tokenExpiresAt: null, // Explicitly clear the expiration
         updatedAt: new Date(),
       });
 

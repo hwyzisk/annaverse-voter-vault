@@ -37,7 +37,7 @@ export const users = pgTable("users", {
   phone: varchar("phone"),
   address: text("address"),
   dateOfBirth: date("date_of_birth"),
-  status: varchar("status", { enum: ['pending', 'approved', 'rejected'] }).notNull().default('approved'), // Default approved for existing users
+  status: varchar("status", { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'), // Default pending for approval workflow
   invitationToken: varchar("invitation_token"), // For password reset/invitation links
   tokenExpiresAt: timestamp("token_expires_at"), // Token expiration
   // Existing fields

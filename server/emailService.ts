@@ -1,12 +1,13 @@
 // SendGrid email service integration - Referenced from javascript_sendgrid blueprint
 import { MailService } from '@sendgrid/mail';
 
-if (!process.env.SENDGRID_API_KEY) {
-  throw new Error("SENDGRID_API_KEY environment variable must be set");
-}
-
+// Initialize SendGrid service - handle missing API key gracefully
 const mailService = new MailService();
-mailService.setApiKey(process.env.SENDGRID_API_KEY);
+if (process.env.SENDGRID_API_KEY) {
+  mailService.setApiKey(process.env.SENDGRID_API_KEY);
+} else {
+  console.warn('SENDGRID_API_KEY not found - email functionality will be disabled');
+}
 
 interface EmailParams {
   to: string;
@@ -17,6 +18,11 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn('Email send skipped - SENDGRID_API_KEY not configured');
+    return false;
+  }
+  
   try {
     await mailService.send({
       to: params.to,

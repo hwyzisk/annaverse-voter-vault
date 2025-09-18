@@ -165,7 +165,7 @@ export class DatabaseStorage implements IStorage {
       // Handle comma-separated supporter status values
       const supporterStatuses = filters.supporterStatus.split(',').map((s: string) => s.trim());
       if (supporterStatuses.length > 1) {
-        whereConditions.push(sql`${contacts.supporterStatus} IN (${sql.join(supporterStatuses.map(s => sql`${s}`), sql`, `)})`);
+        whereConditions.push(sql`${contacts.supporterStatus} IN (${sql.join(supporterStatuses.map((s: string) => sql`${s}`), sql`, `)})`);
       } else {
         whereConditions.push(eq(contacts.supporterStatus, supporterStatuses[0]));
       }
