@@ -82,6 +82,8 @@ export const contactPhones = pgTable("contact_phones", {
   phoneNumber: text("phone_number").notNull(),
   phoneType: varchar("phone_type", { enum: ['mobile', 'home', 'work', 'other'] }).default('mobile'),
   isPrimary: boolean("is_primary").default(false),
+  isBaselineData: boolean("is_baseline_data").notNull().default(false), // True for imported baseline data
+  isManuallyAdded: boolean("is_manually_added").notNull().default(false), // True for volunteer-researched data
   createdAt: timestamp("created_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
 });
@@ -93,6 +95,8 @@ export const contactEmails = pgTable("contact_emails", {
   email: text("email").notNull(),
   emailType: varchar("email_type", { enum: ['personal', 'work', 'other'] }).default('personal'),
   isPrimary: boolean("is_primary").default(false),
+  isBaselineData: boolean("is_baseline_data").notNull().default(false), // True for imported baseline data
+  isManuallyAdded: boolean("is_manually_added").notNull().default(false), // True for volunteer-researched data
   createdAt: timestamp("created_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
 });
@@ -204,6 +208,20 @@ export const insertContactPhoneSchema = createInsertSchema(contactPhones);
 export const insertContactEmailSchema = createInsertSchema(contactEmails);
 export const insertAuditLogSchema = createInsertSchema(auditLogs);
 
+// Client-facing schemas (exclude data source flags - backend controls these)
+export const clientInsertContactPhoneSchema = insertContactPhoneSchema.omit({ 
+  isBaselineData: true, 
+  isManuallyAdded: true,
+  createdAt: true,
+  createdBy: true 
+});
+export const clientInsertContactEmailSchema = insertContactEmailSchema.omit({ 
+  isBaselineData: true, 
+  isManuallyAdded: true,
+  createdAt: true,
+  createdBy: true 
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -218,9 +236,11 @@ export type InsertContactAlias = typeof contactAliases.$inferInsert;
 
 export type ContactPhone = typeof contactPhones.$inferSelect;
 export type InsertContactPhone = typeof contactPhones.$inferInsert;
+export type ClientInsertContactPhone = z.infer<typeof clientInsertContactPhoneSchema>;
 
 export type ContactEmail = typeof contactEmails.$inferSelect;
 export type InsertContactEmail = typeof contactEmails.$inferInsert;
+export type ClientInsertContactEmail = z.infer<typeof clientInsertContactEmailSchema>;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
