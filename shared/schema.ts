@@ -241,10 +241,26 @@ export const clientInsertContactEmailSchema = insertContactEmailSchema.omit({
   createdBy: true 
 });
 
+// Registration schema for user signup (excludes auto-generated fields)
+export const registrationSchema = z.object({
+  email: z.string().trim().min(1, "Email is required").email("Please enter a valid email address"),
+  firstName: z.string().trim().min(1, "First name is required"),
+  lastName: z.string().trim().min(1, "Last name is required"),
+  phone: z.string().trim().min(1, "Phone number is required"),
+  address: z.string().trim().min(1, "Address is required"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 // Types
 export type UpsertUser = z.infer<typeof upsertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+export type RegistrationData = z.infer<typeof registrationSchema>;
 
 export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = typeof contacts.$inferInsert;
