@@ -33,11 +33,11 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
           <div className="w-8 h-8 rounded-full overflow-hidden">
             <img 
               src={annaVerseIcon} 
-              alt="AnnaVerse"
+              alt="Annaverse Voter Vault"
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-xl font-bold text-foreground">AnnaVerse</h1>
+          <h1 className="text-xl font-bold text-foreground">Annaverse Voter Vault</h1>
         </div>
       </div>
       
