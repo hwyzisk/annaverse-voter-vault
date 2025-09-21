@@ -1239,17 +1239,77 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   </CardContent>
                 </Card>
 
-                {/* Contact Information */}
+                {/* Public Contact Information */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Contact Information</CardTitle>
+                    <CardTitle>Public Contact Information</CardTitle>
+                    <p className="text-sm text-muted-foreground">Contact information from public voter records and databases</p>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Phone Numbers */}
+                    {/* Public Phone Numbers */}
                     <div>
                       <Label className="text-muted-foreground">Phone Numbers</Label>
                       <div className="space-y-2 mt-2">
-                        {details.phones.map((phone) => (
+                        {details.phones.filter(phone => phone.isBaselineData || !phone.isManuallyAdded).length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic py-2">No public phone numbers available</p>
+                        ) : (
+                          details.phones.filter(phone => phone.isBaselineData || !phone.isManuallyAdded).map((phone) => (
+                            <div key={phone.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                              <div className="flex items-center space-x-3">
+                                <Phone className="w-4 h-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-sm font-medium">{phone.phoneNumber}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {phone.phoneType} {phone.isPrimary && '• Primary'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Public Email Addresses */}
+                    <div>
+                      <Label className="text-muted-foreground">Email Addresses</Label>
+                      <div className="space-y-2 mt-2">
+                        {details.emails.filter(email => email.isBaselineData || !email.isManuallyAdded).length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic py-2">No public email addresses available</p>
+                        ) : (
+                          details.emails.filter(email => email.isBaselineData || !email.isManuallyAdded).map((email) => (
+                            <div key={email.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                              <div className="flex items-center space-x-3">
+                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-sm font-medium">{email.email}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {email.emailType} {email.isPrimary && '• Primary'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Volunteer-Provided Contact Information */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Volunteer-Provided Contact Information</CardTitle>
+                    <p className="text-sm text-muted-foreground">Contact information added by volunteers and campaign staff</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Volunteer Phone Numbers */}
+                    <div>
+                      <Label className="text-muted-foreground">Phone Numbers</Label>
+                      <div className="space-y-2 mt-2">
+                        {details.phones.filter(phone => phone.isManuallyAdded).map((phone) => (
                           <div key={phone.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                             {editingPhone?.id === phone.id ? (
                               <div className="flex-1 flex items-center space-x-2">
@@ -1368,11 +1428,11 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
 
                     <Separator />
 
-                    {/* Email Addresses */}
+                    {/* Volunteer Email Addresses */}
                     <div>
                       <Label className="text-muted-foreground">Email Addresses</Label>
                       <div className="space-y-2 mt-2">
-                        {details.emails.map((email) => (
+                        {details.emails.filter(email => email.isManuallyAdded).map((email) => (
                           <div key={email.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                             {editingEmail?.id === email.id ? (
                               <div className="flex-1 flex items-center space-x-2">
