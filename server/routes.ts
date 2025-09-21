@@ -244,11 +244,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getAuditLogs(contact.id, undefined, 50)
       ]);
 
+      // Map snake_case database fields to camelCase for frontend
+      const mappedPhones = phones.map((phone: any) => ({
+        ...phone,
+        isBaselineData: phone.is_baseline_data || phone.isBaselineData || false,
+        isManuallyAdded: phone.is_manually_added || phone.isManuallyAdded || false,
+        isPrimary: phone.is_primary || phone.isPrimary || false
+      }));
+
+      const mappedEmails = emails.map((email: any) => ({
+        ...email,
+        isBaselineData: email.is_baseline_data || email.isBaselineData || false,
+        isManuallyAdded: email.is_manually_added || email.isManuallyAdded || false,
+        isPrimary: email.is_primary || email.isPrimary || false
+      }));
+
       res.json({
         ...contact,
         aliases,
-        phones,
-        emails,
+        phones: mappedPhones,
+        emails: mappedEmails,
         auditLogs
       });
     } catch (error) {
