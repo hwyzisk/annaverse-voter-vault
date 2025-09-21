@@ -290,7 +290,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const phoneData = insertContactPhoneSchema.parse({
         ...req.body,
         contactId: req.params.id,
-        createdBy: req.currentUser.id
+        createdBy: req.currentUser.id,
+        isManuallyAdded: true
       });
 
       const phone = await storage.addContactPhone(phoneData);
@@ -337,7 +338,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emailData = insertContactEmailSchema.parse({
         ...req.body,
         contactId: req.params.id,
-        createdBy: req.currentUser.id
+        createdBy: req.currentUser.id,
+        isManuallyAdded: true
       });
 
       const email = await storage.addContactEmail(emailData);
