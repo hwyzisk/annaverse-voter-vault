@@ -100,23 +100,30 @@ class ExcelService {
 
         // Check for existing contact in database by hashed voter ID
         const existing = await this.findExistingVoterContact(hashedVoterId);
+        let contact;
+        
         if (existing) {
-          errors.push(`Row ${i + 2}: Voter ${this.redactVoterId(voterIdStr)} already exists in database`);
-          summary.duplicates++;
-          continue;
+          // Smart merge: Update baseline data, preserve volunteer data
+          contact = await this.updateExistingContactWithBaselineData(existing.id, normalizedContact, userId);
+          await this.updateBaselineContactData(contact.id, row, userId);
+          
+          console.log(`Updated existing contact: ${contact.fullName} (${this.redactVoterId(voterIdStr)})`);
+        } else {
+          // Create new contact
+          contact = await storage.createContact({
+            ...normalizedContact,
+            addressSource: 'public', // Mark address as from public data
+            lastUpdatedBy: userId,
+            lastPublicUpdate: new Date(),
+            isActive: true
+          });
+
+          // Log audit trail for contact creation from Excel import
+          await auditService.logContactCreate(contact, userId, 'excel_import');
+
+          // Store related data (phones, aliases)
+          await this.storeRelatedVoterData(contact.id, row, userId);
         }
-
-        // Create contact
-        const contact = await storage.createContact({
-          ...normalizedContact,
-          lastUpdatedBy: userId,
-        });
-
-        // Log audit trail for contact creation from Excel import
-        await auditService.logContactCreate(contact, userId, 'excel_import');
-
-        // Store related data (phones, aliases)
-        await this.storeRelatedVoterData(contact.id, row, userId);
         
         processedVoterIds.add(hashedVoterId);
         processed++;
@@ -294,13 +301,136 @@ class ExcelService {
     return parts.length > 1 ? parts[parts.length - 1] : null;
   }
 
+  private async updateExistingContactWithBaselineData(contactId: string, baselineData: InsertContact, userId: string): Promise<any> {
+    try {
+      // Only update baseline contact fields, preserve volunteer data
+      const baselineUpdates = {
+        fullName: baselineData.fullName,
+        firstName: baselineData.firstName,
+        lastName: baselineData.lastName,
+        middleName: baselineData.middleName,
+        dateOfBirth: baselineData.dateOfBirth,
+        streetAddress: baselineData.streetAddress,
+        city: baselineData.city,
+        state: baselineData.state,
+        zipCode: baselineData.zipCode,
+        registrationDate: baselineData.registrationDate,
+        party: baselineData.party,
+        voterStatus: baselineData.voterStatus,
+        district: baselineData.district,
+        addressSource: 'public' as const, // Mark address as from public data
+        lastUpdatedBy: userId,
+        lastPublicUpdate: new Date(),
+        isActive: true
+      };
+
+      const updatedContact = await storage.updateContact(contactId, baselineUpdates, userId);
+      
+      // Log audit trail for baseline data update
+      await auditService.logUserAction(userId, 'update_baseline_data', {
+        contactId,
+        source: 'excel_import'
+      });
+
+      return updatedContact;
+    } catch (error) {
+      console.error('Error updating existing contact with baseline data:', error);
+      throw error;
+    }
+  }
+
+  private async updateBaselineContactData(contactId: string, row: VoterExcelRow, userId: string): Promise<void> {
+    try {
+      // Get existing phones to implement deduplication
+      const existingPhones = await storage.getContactPhones(contactId);
+      
+      // Remove outdated baseline phone numbers
+      for (const phone of existingPhones) {
+        if (phone.isBaselineData) {
+          await storage.removeContactPhone(phone.id);
+          
+          // Log audit trail for baseline phone deletion
+          await auditService.logUserAction(userId, 'delete_baseline_phone', {
+            contactId,
+            phoneId: phone.id,
+            phoneNumber: phone.phoneNumber,
+            source: 'excel_import'
+          });
+        }
+      }
+
+      // Add new baseline phone if available
+      if (row.Telephone_Number && String(row.Telephone_Number).trim() !== 'NULL') {
+        const phoneNumber = String(row.Telephone_Number).trim();
+        
+        // Check if this exact number already exists as volunteer data
+        const existingVolunteerPhone = existingPhones.find(p => 
+          p.phoneNumber === phoneNumber && p.isManuallyAdded
+        );
+        
+        // Only add if it doesn't already exist as volunteer data
+        if (!existingVolunteerPhone) {
+          // Check if we need to set this as primary (no existing primary phones)
+          const hasPrimary = existingPhones.some(p => p.isPrimary && !p.isBaselineData);
+          
+          const phone: InsertContactPhone = {
+            contactId,
+            phoneNumber,
+            phoneType: 'home',
+            isPrimary: !hasPrimary, // Set as primary only if no existing primary
+            isBaselineData: true,
+            isManuallyAdded: false,
+            createdBy: userId
+          };
+          const createdPhone = await storage.addContactPhone(phone);
+          
+          // Log audit trail for baseline phone update
+          await auditService.logPhoneAdd(createdPhone, userId);
+        }
+      }
+
+      // Add voter alias if needed with uniqueness check
+      if (row.VoterID) {
+        const aliasText = `Voter-${this.redactVoterId(String(row.VoterID))}`;
+        
+        // Check if alias already exists for this contact
+        const existingAliases = await storage.getContactAliases(contactId);
+        const aliasExists = existingAliases.some(alias => alias.alias === aliasText);
+        
+        if (!aliasExists) {
+          try {
+            const voterAlias: InsertContactAlias = {
+              contactId,
+              alias: aliasText
+            };
+            await storage.addContactAlias(voterAlias);
+            
+            // Log audit trail for alias creation
+            await auditService.logUserAction(userId, 'create_alias', {
+              contactId,
+              alias: voterAlias.alias,
+              source: 'excel_import'
+            });
+          } catch (aliasError) {
+            console.log(`Failed to create alias for contact ${contactId}: ${aliasError}`);
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error updating baseline contact data:', error);
+    }
+  }
+
   private async findExistingVoterContact(hashedVoterId: string): Promise<any> {
     try {
-      // Search by systemId which contains the hash prefix  
-      const systemIdPrefix = `VV-${hashedVoterId.substring(0, 8)}`;
-      // Use empty nameFilters since we're searching by system ID through other filters
-      const result = await storage.searchContacts({}, { systemId: systemIdPrefix }, 1, 0);
-      return result.contacts.length > 0 ? result.contacts[0] : null;
+      // Use exact systemId matching instead of prefix search for data integrity
+      const exactSystemId = `VV-${hashedVoterId.substring(0, 8)}`;
+      const result = await storage.searchContacts({}, { systemId: exactSystemId }, 1, 0);
+      
+      // Verify exact match to prevent false positives
+      const matches = result.contacts.filter(contact => contact.systemId === exactSystemId);
+      return matches.length > 0 ? matches[0] : null;
     } catch (error) {
       console.error('Error checking for existing voter:', error);
       return null;
@@ -317,6 +447,8 @@ class ExcelService {
           phoneNumber,
           phoneType: 'home',
           isPrimary: true,
+          isBaselineData: true,
+          isManuallyAdded: false,
           createdBy: userId
         };
         const createdPhone = await storage.addContactPhone(phone);
@@ -327,18 +459,26 @@ class ExcelService {
       
       // Add redacted voter ID as searchable alias for privacy compliance
       if (row.VoterID) {
-        const voterAlias: InsertContactAlias = {
-          contactId,
-          alias: `Voter-${this.redactVoterId(String(row.VoterID))}`
-        };
-        await storage.addContactAlias(voterAlias);
+        const aliasText = `Voter-${this.redactVoterId(String(row.VoterID))}`;
         
-        // Log audit trail for alias creation from Excel import
-        await auditService.logUserAction(userId, 'create_alias', {
-          contactId,
-          alias: voterAlias.alias,
-          source: 'excel_import'
-        });
+        // Check if alias already exists for this contact (though unlikely for new contacts)
+        const existingAliases = await storage.getContactAliases(contactId);
+        const aliasExists = existingAliases.some(alias => alias.alias === aliasText);
+        
+        if (!aliasExists) {
+          const voterAlias: InsertContactAlias = {
+            contactId,
+            alias: aliasText
+          };
+          await storage.addContactAlias(voterAlias);
+          
+          // Log audit trail for alias creation from Excel import
+          await auditService.logUserAction(userId, 'create_alias', {
+            contactId,
+            alias: voterAlias.alias,
+            source: 'excel_import'
+          });
+        }
       }
       
     } catch (error) {
