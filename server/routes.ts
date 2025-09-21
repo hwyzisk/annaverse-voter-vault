@@ -244,23 +244,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getAuditLogs(contact.id, undefined, 50)
       ]);
 
-      // Map snake_case database fields to camelCase for frontend
-      console.log('🔍 Original phones:', phones.length > 0 ? phones[0] : 'no phones');
-      const mappedPhones = phones.map((phone: any) => ({
-        ...phone,
-        isBaselineData: phone.is_baseline_data || phone.isBaselineData || false,
-        isManuallyAdded: phone.is_manually_added || phone.isManuallyAdded || false,
-        isPrimary: phone.is_primary || phone.isPrimary || false
-      }));
-      console.log('✅ Mapped phones:', mappedPhones.length > 0 ? mappedPhones[0] : 'no phones');
-
-      const mappedEmails = emails.map((email: any) => ({
-        ...email,
-        isBaselineData: email.is_baseline_data || email.isBaselineData || false,
-        isManuallyAdded: email.is_manually_added || email.isManuallyAdded || false,
-        isPrimary: email.is_primary || email.isPrimary || false
-      }));
-      console.log('✅ Mapped emails:', mappedEmails.length > 0 ? mappedEmails[0] : 'no emails');
+      // Data is already in camelCase format from storage layer
+      const mappedPhones = phones;
+      const mappedEmails = emails;
 
       res.json({
         ...contact,
