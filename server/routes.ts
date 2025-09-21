@@ -79,6 +79,20 @@ const requireRole = (roles: string[]) => {
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Disable ETag for API routes to prevent 304 caching
+  app.set('etag', false);
+  
+  // Add no-cache headers for all API routes
+  app.use('/api', (req, res, next) => {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store'
+    });
+    next();
+  });
+
   // Auth middleware
   await setupAuth(app);
 
