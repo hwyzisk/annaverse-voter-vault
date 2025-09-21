@@ -243,10 +243,10 @@ export class DatabaseStorage implements IStorage {
             lastPublicUpdate: contacts.lastPublicUpdate,
             phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
             emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`,
-            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.is_manually_added} = true)`,
-            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.is_manually_added} = true)`,
-            baselinePhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.is_baseline_data} = true)`,
-            baselineEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.is_baseline_data} = true)`
+            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.isManuallyAdded} = true)`,
+            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.isManuallyAdded} = true)`,
+            baselinePhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.isBaselineData} = true)`,
+            baselineEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.isBaselineData} = true)`
           }).from(contacts)
             .where(whereClause)
             .limit(limit)
@@ -282,10 +282,10 @@ export class DatabaseStorage implements IStorage {
             lastPublicUpdate: contacts.lastPublicUpdate,
             phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
             emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`,
-            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.is_manually_added} = true)`,
-            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.is_manually_added} = true)`,
-            baselinePhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.is_baseline_data} = true)`,
-            baselineEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.is_baseline_data} = true)`
+            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.isManuallyAdded} = true)`,
+            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.isManuallyAdded} = true)`,
+            baselinePhoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id} AND ${contactPhones.isBaselineData} = true)`,
+            baselineEmailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id} AND ${contactEmails.isBaselineData} = true)`
           }).from(contacts)
             .limit(limit)
             .offset(offset)
