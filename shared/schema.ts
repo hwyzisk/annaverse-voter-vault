@@ -74,6 +74,10 @@ export const contacts = pgTable("contacts", {
   supporterStatus: varchar("supporter_status", { enum: ['confirmed-supporter', 'likely-supporter', 'opposition', 'unknown'] }).default('unknown'),
   volunteerLikeliness: varchar("volunteer_likeliness", { enum: ['confirmed-volunteer', 'likely-to-volunteer', 'will-not-volunteer', 'unknown'] }).default('unknown'),
   notes: text("notes"),
+  // Source tracking and smart import fields
+  addressSource: varchar("address_source", { enum: ['public', 'volunteer'] }),
+  isActive: boolean("is_active").notNull().default(true),
+  lastPublicUpdate: timestamp("last_public_update"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),

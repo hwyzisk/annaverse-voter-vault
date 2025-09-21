@@ -559,16 +559,64 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   Contact Information
                 </AccordionTrigger>
                 <AccordionContent className="pb-6">
-                  {/* Phone Numbers */}
+                  {/* Public Contact Info Section */}
+                  {(details.phones.some((p: any) => p.isBaselineData) || details.emails.some((e: any) => e.isBaselineData)) && (
+                    <div className="mb-6">
+                      <Label className="text-base font-medium mb-3 block text-black dark:text-white">
+                        📋 Public Contact Info
+                      </Label>
+                      <div className="space-y-3">
+                        {/* Public Phone Numbers */}
+                        {details.phones.filter((phone: any) => phone.isBaselineData).map((phone) => (
+                          <div key={phone.id} className="p-4 bg-muted/30 rounded-lg border-l-4 border-black">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Phone className="w-4 h-4 text-black dark:text-white" />
+                                <div>
+                                  <p className="font-medium text-sm">{phone.phoneNumber}</p>
+                                  <p className="text-xs text-muted-foreground capitalize">
+                                    {phone.phoneType} {phone.isPrimary && '(Primary)'}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="text-xs">Public Data</Badge>
+                            </div>
+                          </div>
+                        ))}
+                        {/* Public Email Addresses */}
+                        {details.emails.filter((email: any) => email.isBaselineData).map((email) => (
+                          <div key={email.id} className="p-4 bg-muted/30 rounded-lg border-l-4 border-black">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <Mail className="w-4 h-4 text-black dark:text-white" />
+                                <div>
+                                  <p className="font-medium text-sm">{email.email}</p>
+                                  <p className="text-xs text-muted-foreground capitalize">
+                                    {email.emailType} {email.isPrimary && '(Primary)'}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className="text-xs">Public Data</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Volunteer-Added Contact Info Section */}
                   <div className="mb-6">
-                    <Label className="text-base font-medium mb-3 block">Phone Numbers</Label>
+                    <Label className="text-base font-medium mb-3 block text-green-600">
+                      🌱 Info Added By Volunteer
+                    </Label>
                     <div className="space-y-3">
-                      {details.phones.map((phone) => (
-                        <div key={phone.id} className="p-4 bg-muted/50 rounded-lg">
+                      {/* Volunteer Phone Numbers */}
+                      {details.phones.filter((phone: any) => phone.isManuallyAdded).map((phone) => (
+                        <div key={phone.id} className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border-l-4 border-green-600">
                           {editingPhone?.id === phone.id ? (
                             <div className="space-y-3">
                               <div className="flex items-center space-x-3">
-                                <Phone className="w-4 h-4 text-muted-foreground" />
+                                <Phone className="w-4 h-4 text-green-600" />
                                 <Input
                                   type="tel"
                                   value={editingPhone.phoneNumber}
@@ -615,18 +663,21 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-3">
-                                <Phone className="w-4 h-4 text-muted-foreground" />
-                                <div>
-                                  <p className="text-base font-medium">{phone.phoneNumber}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {phone.phoneType} {phone.isPrimary && '• Primary'}
-                                  </p>
+                            <>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <Phone className="w-4 h-4 text-green-600" />
+                                  <div>
+                                    <p className="text-base font-medium">{phone.phoneNumber}</p>
+                                    <p className="text-sm text-muted-foreground capitalize">
+                                      {phone.phoneType} {phone.isPrimary && '• Primary'}
+                                    </p>
+                                  </div>
                                 </div>
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Volunteer Added</Badge>
                               </div>
                               {canEdit && (
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center justify-end space-x-2 mt-2">
                                   <Button 
                                     variant="ghost" 
                                     size="default"
@@ -652,7 +703,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                   </Button>
                                 </div>
                               )}
-                            </div>
+                            </>
                           )}
                         </div>
                       ))}
@@ -691,21 +742,14 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                           </Button>
                         </div>
                       )}
-                    </div>
-                  </div>
 
-                  <Separator className="my-6" />
-
-                  {/* Email Addresses */}
-                  <div>
-                    <Label className="text-base font-medium mb-3 block">Email Addresses</Label>
-                    <div className="space-y-3">
-                      {details.emails.map((email) => (
-                        <div key={email.id} className="p-4 bg-muted/50 rounded-lg">
+                      {/* Volunteer Email Addresses */}
+                      {details.emails.filter((email: any) => email.isManuallyAdded).map((email) => (
+                        <div key={email.id} className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border-l-4 border-green-600">
                           {editingEmail?.id === email.id ? (
                             <div className="space-y-3">
                               <div className="flex items-center space-x-3">
-                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                <Mail className="w-4 h-4 text-green-600" />
                                 <Input
                                   type="email"
                                   value={editingEmail.email}
@@ -753,16 +797,18 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                           ) : (
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
-                                <Mail className="w-4 h-4 text-muted-foreground" />
+                                <Mail className="w-4 h-4 text-green-600" />
                                 <div>
                                   <p className="text-base font-medium">{email.email}</p>
-                                  <p className="text-sm text-muted-foreground">
+                                  <p className="text-sm text-muted-foreground capitalize">
                                     {email.emailType} {email.isPrimary && '• Primary'}
                                   </p>
                                 </div>
                               </div>
-                              {canEdit && (
-                                <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Volunteer Added</Badge>
+                                {canEdit && (
+                                  <div className="flex items-center space-x-1">
                                   <Button 
                                     variant="ghost" 
                                     size="default"
@@ -786,8 +832,9 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
-                                </div>
-                              )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>

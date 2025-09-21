@@ -204,15 +204,21 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
+                          {/* Phone Icon - 3-color system */}
                           {(contact as any).manualPhoneCount > 0 ? (
-                            <Phone className="w-3 h-3 text-green-600" />
+                            <Phone className="w-3 h-3 text-green-600" data-testid={`icon-phone-volunteer-${contact.id}`} />
+                          ) : (contact as any).baselinePhoneCount > 0 ? (
+                            <Phone className="w-3 h-3 text-black dark:text-white" data-testid={`icon-phone-public-${contact.id}`} />
                           ) : (
-                            <Phone className="w-3 h-3 text-gray-300" />
+                            <Phone className="w-3 h-3 text-gray-300" data-testid={`icon-phone-none-${contact.id}`} />
                           )}
+                          {/* Email Icon - 3-color system */}
                           {(contact as any).manualEmailCount > 0 ? (
-                            <Mail className="w-3 h-3 text-blue-600" />
+                            <Mail className="w-3 h-3 text-green-600" data-testid={`icon-email-volunteer-${contact.id}`} />
+                          ) : (contact as any).baselineEmailCount > 0 ? (
+                            <Mail className="w-3 h-3 text-black dark:text-white" data-testid={`icon-email-public-${contact.id}`} />
                           ) : (
-                            <Mail className="w-3 h-3 text-gray-300" />
+                            <Mail className="w-3 h-3 text-gray-300" data-testid={`icon-email-none-${contact.id}`} />
                           )}
                         </div>
                       </td>
@@ -271,15 +277,21 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                           {contact.city || 'N/A'}, {contact.zipCode || 'N/A'}
                         </span>
                         <div className="flex items-center gap-1">
+                          {/* Phone Icon - 3-color system */}
                           {(contact as any).manualPhoneCount > 0 ? (
-                            <Phone className="w-3 h-3 text-green-600" />
+                            <Phone className="w-3 h-3 text-green-600" data-testid={`icon-phone-volunteer-${contact.id}`} />
+                          ) : (contact as any).baselinePhoneCount > 0 ? (
+                            <Phone className="w-3 h-3 text-black dark:text-white" data-testid={`icon-phone-public-${contact.id}`} />
                           ) : (
-                            <Phone className="w-3 h-3 text-gray-300" />
+                            <Phone className="w-3 h-3 text-gray-300" data-testid={`icon-phone-none-${contact.id}`} />
                           )}
+                          {/* Email Icon - 3-color system */}
                           {(contact as any).manualEmailCount > 0 ? (
-                            <Mail className="w-3 h-3 text-blue-600" />
+                            <Mail className="w-3 h-3 text-green-600" data-testid={`icon-email-volunteer-${contact.id}`} />
+                          ) : (contact as any).baselineEmailCount > 0 ? (
+                            <Mail className="w-3 h-3 text-black dark:text-white" data-testid={`icon-email-public-${contact.id}`} />
                           ) : (
-                            <Mail className="w-3 h-3 text-gray-300" />
+                            <Mail className="w-3 h-3 text-gray-300" data-testid={`icon-email-none-${contact.id}`} />
                           )}
                         </div>
                       </div>
