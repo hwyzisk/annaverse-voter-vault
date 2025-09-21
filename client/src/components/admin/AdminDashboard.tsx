@@ -807,14 +807,23 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
             <TabsContent value="data" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Excel Data Import</CardTitle>
+                  <CardTitle>Smart Excel Data Import</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Import voter data with intelligent merging that preserves all volunteer-added information
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
                     <i className="fas fa-file-excel text-4xl text-green-600 mb-4"></i>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Upload an Excel file to seed the database with contact data
-                    </p>
+                    <div className="text-sm text-muted-foreground mb-4 space-y-2">
+                      <p className="font-medium">Upload voter database updates with smart merging:</p>
+                      <ul className="text-xs space-y-1 text-left max-w-md mx-auto">
+                        <li>• ✅ Updates baseline voter data (name, address, party, etc.)</li>
+                        <li>• 🌱 Preserves volunteer-added contact info and assessments</li>
+                        <li>• 📝 Maintains notes, supporter status, and volunteer likelihood</li>
+                        <li>• 🔄 Handles 180k+ monthly voter database refreshes</li>
+                      </ul>
+                    </div>
                     <input
                       type="file"
                       accept=".xlsx,.xls"
@@ -839,7 +848,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                     <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
                       <div className="flex justify-between items-center text-sm">
                         <span className="font-medium">
-                          {uploadProgress.phase === 'processing' ? 'Processing Data' : 'Importing'}
+                          {uploadProgress.phase === 'processing' ? 'Smart Merging Data' : 'Importing with Preservation'}
                         </span>
                         <span className="text-muted-foreground">
                           {uploadProgress.percentage}%
@@ -855,8 +864,8 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                         </span>
                       </div>
                       {uploadProgress.duplicates > 0 && (
-                        <div className="text-xs text-amber-600">
-                          {uploadProgress.duplicates} duplicates found
+                        <div className="text-xs text-blue-600">
+                          {uploadProgress.duplicates} existing contacts updated (volunteer data preserved)
                         </div>
                       )}
                       {uploadProgress.errors > 0 && (
