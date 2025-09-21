@@ -1239,11 +1239,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   </CardContent>
                 </Card>
 
-                {/* Contact Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Contact Information</CardTitle>
-                  </CardHeader>
                   <CardContent className="space-y-4">
                     {/* Phone Numbers */}
                     <div>
