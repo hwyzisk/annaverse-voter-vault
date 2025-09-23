@@ -5,9 +5,6 @@ import annaVerseIcon from "@assets/AnnaVerse_1758230016506.png";
 import skylineBackground from "@assets/transparent skyline_1758230016506.png";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
-  };
 
   return (
     <div 
@@ -40,12 +37,14 @@ export default function Landing() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <Button 
-            onClick={handleLogin} 
+          <Button
             className="w-full"
+            asChild
             data-testid="button-login"
           >
-            Sign In to Continue
+            <Link href="/login">
+              Sign In to Continue
+            </Link>
           </Button>
           
           <Button 

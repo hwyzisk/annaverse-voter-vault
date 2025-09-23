@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -47,6 +47,15 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Sync local state with contact data when it changes (but not while editing)
+  useEffect(() => {
+    if (!isEditing) {
+      setSupporterStatus(contact.supporterStatus || "unknown");
+      setVolunteerLikeliness(contact.volunteerLikeliness || "unknown");
+      setNotes(contact.notes || "");
+    }
+  }, [contact.supporterStatus, contact.volunteerLikeliness, contact.notes, isEditing]);
 
   const { data: contactDetails, isLoading } = useQuery<ContactDetails>({
     queryKey: ['/api/contacts', contact.id],
@@ -315,12 +324,12 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
               {canEdit && (
                 <Button
                   size="default"
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={isEditing ? handleSave : () => setIsEditing(true)}
                   className="h-11 px-4"
                   data-testid="button-edit"
                 >
                   <Edit className="w-4 h-4 mr-2" />
-                  {isEditing ? 'Cancel' : 'Edit'}
+                  {isEditing ? 'Save' : 'Edit'}
                 </Button>
               )}
             </div>
@@ -329,60 +338,62 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
           {/* Mobile Content with Accordion */}
           <div className="flex-1 overflow-auto">
             <Accordion type="multiple" defaultValue={["status", "identity"]} className="px-4">
-              {/* Supporter Status Section */}
+              {/* Campaign Status Section */}
               <AccordionItem value="status">
                 <AccordionTrigger className="h-12 text-base font-medium">
-                  Supporter Status
+                  Campaign Status
                 </AccordionTrigger>
                 <AccordionContent className="pb-6">
-                  {canEdit && isEditing ? (
-                    <RadioGroup 
-                      value={supporterStatus}
-                      onValueChange={(value) => setSupporterStatus(value as any)}
-                      className="space-y-3"
-                      data-testid="radio-supporter-status"
-                    >
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
-                        <RadioGroupItem value="confirmed-supporter" id="mobile-confirmed-supporter" />
-                        <label htmlFor="mobile-confirmed-supporter" className="text-base font-medium flex-1">
-                          Confirmed Supporter
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
-                        <RadioGroupItem value="likely-supporter" id="mobile-likely-supporter" />
-                        <label htmlFor="mobile-likely-supporter" className="text-base font-medium flex-1">
-                          Likely Supporter
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
-                        <RadioGroupItem value="opposition" id="mobile-opposition" />
-                        <label htmlFor="mobile-opposition" className="text-base font-medium flex-1">
-                          Opposition
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg border">
-                        <RadioGroupItem value="unknown" id="mobile-unknown" />
-                        <label htmlFor="mobile-unknown" className="text-base font-medium flex-1">
-                          Unknown
-                        </label>
-                      </div>
-                    </RadioGroup>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <Badge 
+                  {/* Supporter Status */}
+                  <div className="mb-4">
+                    <Label className="text-base font-medium mb-3 block">Supporter Status</Label>
+                    {canEdit && isEditing ? (
+                      <RadioGroup
+                        value={supporterStatus}
+                        onValueChange={(value) => setSupporterStatus(value as any)}
+                        className="space-y-3"
+                        data-testid="radio-supporter-status"
+                      >
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="confirmed-supporter" id="mobile-confirmed-supporter" />
+                          <label htmlFor="mobile-confirmed-supporter" className="text-base font-medium flex-1">
+                            Confirmed Supporter
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="likely-supporter" id="mobile-likely-supporter" />
+                          <label htmlFor="mobile-likely-supporter" className="text-base font-medium flex-1">
+                            Likely Supporter
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="opposition" id="mobile-opposition" />
+                          <label htmlFor="mobile-opposition" className="text-base font-medium flex-1">
+                            Opposition
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-3 p-3 rounded-lg border">
+                          <RadioGroupItem value="unknown" id="mobile-unknown" />
+                          <label htmlFor="mobile-unknown" className="text-base font-medium flex-1">
+                            Unknown
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    ) : (
+                      <Badge
                         variant={
-                          details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' : 
+                          details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' :
                           details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
                         }
                         className="text-sm px-3 py-1"
                         data-testid="badge-supporter-status"
                       >
-                        {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' : 
-                         details.supporterStatus === 'likely-supporter' ? 'Likely Supporter' : 
+                        {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' :
+                         details.supporterStatus === 'likely-supporter' ? 'Likely Supporter' :
                          details.supporterStatus === 'opposition' ? 'Opposition' : 'Unknown'}
                       </Badge>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   <Separator className="my-4" />
 
@@ -390,7 +401,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   <div className="mb-4">
                     <Label className="text-base font-medium mb-3 block">Likeliness to Volunteer</Label>
                     {canEdit && isEditing ? (
-                      <RadioGroup 
+                      <RadioGroup
                         value={volunteerLikeliness}
                         onValueChange={(value) => setVolunteerLikeliness(value as any)}
                         className="space-y-3"
@@ -422,16 +433,16 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                         </div>
                       </RadioGroup>
                     ) : (
-                      <Badge 
+                      <Badge
                         variant={
-                          details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' : 
+                          details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' :
                           details.volunteerLikeliness === 'will-not-volunteer' ? 'destructive' : 'secondary'
                         }
                         className="text-sm px-3 py-1"
                         data-testid="badge-volunteer-likeliness"
                       >
-                        {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' : 
-                         details.volunteerLikeliness === 'likely-to-volunteer' ? 'Likely To Volunteer' : 
+                        {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' :
+                         details.volunteerLikeliness === 'likely-to-volunteer' ? 'Likely To Volunteer' :
                          details.volunteerLikeliness === 'will-not-volunteer' ? 'Will Not Volunteer' : 'Unknown'}
                       </Badge>
                     )}
@@ -1015,11 +1026,11 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 {canEdit && (
                   <Button
                     size="sm"
-                    onClick={() => setIsEditing(!isEditing)}
+                    onClick={isEditing ? handleSave : () => setIsEditing(true)}
                     data-testid="button-edit"
                   >
                     <Edit className="w-4 h-4 mr-2" />
-                    {isEditing ? 'Cancel' : 'Edit'}
+                    {isEditing ? 'Save' : 'Edit'}
                   </Button>
                 )}
               </div>
@@ -1029,111 +1040,113 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
           {/* Profile Content */}
           <div className="flex-1 overflow-auto p-6">
             <div className="space-y-6">
-              {/* Supporter Status - Moved to Top */}
+              {/* Campaign Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Supporter Status</CardTitle>
+                  <CardTitle>Campaign Status</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {canEdit && isEditing ? (
-                    <RadioGroup 
-                      value={supporterStatus}
-                      onValueChange={(value) => setSupporterStatus(value as any)}
-                      className="flex flex-row space-x-6"
-                      data-testid="radio-supporter-status"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="confirmed-supporter" id="confirmed-supporter" />
-                        <label htmlFor="confirmed-supporter" className="text-sm font-medium leading-none">
-                          Confirmed Supporter
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="likely-supporter" id="likely-supporter" />
-                        <label htmlFor="likely-supporter" className="text-sm font-medium leading-none">
-                          Likely Supporter
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="opposition" id="opposition" />
-                        <label htmlFor="opposition" className="text-sm font-medium leading-none">
-                          Opposition
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="unknown" id="unknown" />
-                        <label htmlFor="unknown" className="text-sm font-medium leading-none">
-                          Unknown
-                        </label>
-                      </div>
-                    </RadioGroup>
-                  ) : (
-                    <Badge 
-                      variant={
-                        details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' : 
-                        details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
-                      }
-                      data-testid="badge-supporter-status"
-                    >
-                      {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' : 
-                       details.supporterStatus === 'likely-supporter' ? 'Likely Supporter' : 
-                       details.supporterStatus === 'opposition' ? 'Opposition' : 'Unknown'}
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
+                <CardContent className="space-y-6">
+                  {/* Supporter Status */}
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">Supporter Status</Label>
+                    {canEdit && isEditing ? (
+                      <RadioGroup
+                        value={supporterStatus}
+                        onValueChange={(value) => setSupporterStatus(value as any)}
+                        className="flex flex-row space-x-6"
+                        data-testid="radio-supporter-status"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="confirmed-supporter" id="confirmed-supporter" />
+                          <label htmlFor="confirmed-supporter" className="text-sm font-medium leading-none">
+                            Confirmed Supporter
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="likely-supporter" id="likely-supporter" />
+                          <label htmlFor="likely-supporter" className="text-sm font-medium leading-none">
+                            Likely Supporter
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="opposition" id="opposition" />
+                          <label htmlFor="opposition" className="text-sm font-medium leading-none">
+                            Opposition
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="unknown" id="unknown" />
+                          <label htmlFor="unknown" className="text-sm font-medium leading-none">
+                            Unknown
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    ) : (
+                      <Badge
+                        variant={
+                          details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' :
+                          details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
+                        }
+                        data-testid="badge-supporter-status"
+                      >
+                        {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' :
+                         details.supporterStatus === 'likely-supporter' ? 'Likely Supporter' :
+                         details.supporterStatus === 'opposition' ? 'Opposition' : 'Unknown'}
+                      </Badge>
+                    )}
+                  </div>
 
-              {/* Volunteer Likeliness */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Likeliness to Volunteer</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {canEdit && isEditing ? (
-                    <RadioGroup 
-                      value={volunteerLikeliness}
-                      onValueChange={(value) => setVolunteerLikeliness(value as any)}
-                      className="flex flex-row space-x-6"
-                      data-testid="radio-volunteer-likeliness"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="confirmed-volunteer" id="confirmed-volunteer" />
-                        <label htmlFor="confirmed-volunteer" className="text-sm font-medium leading-none">
-                          Confirmed Volunteer
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="likely-to-volunteer" id="likely-to-volunteer" />
-                        <label htmlFor="likely-to-volunteer" className="text-sm font-medium leading-none">
-                          Likely To Volunteer
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="will-not-volunteer" id="will-not-volunteer" />
-                        <label htmlFor="will-not-volunteer" className="text-sm font-medium leading-none">
-                          Will Not Volunteer
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="unknown" id="volunteer-unknown" />
-                        <label htmlFor="volunteer-unknown" className="text-sm font-medium leading-none">
-                          Unknown
-                        </label>
-                      </div>
-                    </RadioGroup>
-                  ) : (
-                    <Badge 
-                      variant={
-                        details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' : 
-                        details.volunteerLikeliness === 'will-not-volunteer' ? 'destructive' : 'secondary'
-                      }
-                      data-testid="badge-volunteer-likeliness"
-                    >
-                      {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' : 
-                       details.volunteerLikeliness === 'likely-to-volunteer' ? 'Likely To Volunteer' : 
-                       details.volunteerLikeliness === 'will-not-volunteer' ? 'Will Not Volunteer' : 'Unknown'}
-                    </Badge>
-                  )}
+                  <Separator />
+
+                  {/* Volunteer Likeliness */}
+                  <div>
+                    <Label className="text-sm font-medium mb-3 block">Likeliness to Volunteer</Label>
+                    {canEdit && isEditing ? (
+                      <RadioGroup
+                        value={volunteerLikeliness}
+                        onValueChange={(value) => setVolunteerLikeliness(value as any)}
+                        className="flex flex-row space-x-6"
+                        data-testid="radio-volunteer-likeliness"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="confirmed-volunteer" id="confirmed-volunteer" />
+                          <label htmlFor="confirmed-volunteer" className="text-sm font-medium leading-none">
+                            Confirmed Volunteer
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="likely-to-volunteer" id="likely-to-volunteer" />
+                          <label htmlFor="likely-to-volunteer" className="text-sm font-medium leading-none">
+                            Likely To Volunteer
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="will-not-volunteer" id="will-not-volunteer" />
+                          <label htmlFor="will-not-volunteer" className="text-sm font-medium leading-none">
+                            Will Not Volunteer
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="unknown" id="volunteer-unknown" />
+                          <label htmlFor="volunteer-unknown" className="text-sm font-medium leading-none">
+                            Unknown
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    ) : (
+                      <Badge
+                        variant={
+                          details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' :
+                          details.volunteerLikeliness === 'will-not-volunteer' ? 'destructive' : 'secondary'
+                        }
+                        data-testid="badge-volunteer-likeliness"
+                      >
+                        {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' :
+                         details.volunteerLikeliness === 'likely-to-volunteer' ? 'Likely To Volunteer' :
+                         details.volunteerLikeliness === 'will-not-volunteer' ? 'Will Not Volunteer' : 'Unknown'}
+                      </Badge>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
               

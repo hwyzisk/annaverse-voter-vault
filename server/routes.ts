@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated, setUserSession, clearUserSession } from "./localAuth";
 import { searchService } from "./services/searchService";
 import { excelService } from "./services/excelService";
 import { excelBatchService } from "./services/excelBatchService";
@@ -132,13 +132,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/login', async (req, res) => {
+  app.post('/api/auth/login', async (req: any, res) => {
     try {
       const { email, password } = req.body;
       const result = await AuthService.loginUser({ email, password });
-      
+
       if (result.success && result.user) {
-        // Set session or token here (for now just return user data)
+        // Set session for authenticated user
+        setUserSession(req, result.user.id);
         res.json(result);
       } else {
         res.status(401).json(result);
@@ -168,6 +169,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Password reset confirm error:', error);
       res.status(500).json({ success: false, message: 'Password reset failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', isAuthenticated, async (req: any, res) => {
+    try {
+      clearUserSession(req);
+      res.json({ success: true, message: 'Logged out successfully' });
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.status(500).json({ success: false, message: 'Logout failed' });
+    }
+  });
+
+  // GET logout route for frontend compatibility (redirects to home)
+  app.get('/api/logout', async (req: any, res) => {
+    try {
+      clearUserSession(req);
+      res.redirect('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      res.redirect('/');
+    }
+  });
+
+  // Temporary admin promotion route for development
+  app.post('/api/admin/promote-user', async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: 'Email required' });
+      }
+
+      // Find user and promote to admin
+      const users = await storage.getAllUsers();
+      const user = users.find(u => u.email === email);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      // Update user to admin status
+      await storage.updateUser(user.id, {
+        role: 'admin',
+        status: 'approved'
+      });
+
+      res.json({ success: true, message: `User ${email} promoted to admin` });
+    } catch (error) {
+      console.error('Admin promotion error:', error);
+      res.status(500).json({ success: false, message: 'Promotion failed' });
     }
   });
 

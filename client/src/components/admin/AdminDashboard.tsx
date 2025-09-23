@@ -459,7 +459,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                                       userId: userItem.id,
                                       isActive: !userItem.isActive
                                     })}
-                                    disabled={updateUserStatusMutation.isPending || userItem.id === user.id}
+                                    disabled={updateUserStatusMutation.isPending || userItem.id === user?.id}
                                     data-testid={`button-toggle-status-${userItem.id}`}
                                   >
                                     {userItem.isActive ? 'Deactivate' : 'Activate'}
@@ -483,7 +483,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                                   >
                                     <Edit className="w-3 h-3" />
                                   </Button>
-                                  {userItem.id !== user.id && (
+                                  {userItem.id !== user?.id && (
                                     <AlertDialog>
                                       <AlertDialogTrigger asChild>
                                         <Button
@@ -1120,13 +1120,13 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                                     userId: userItem.id,
                                     isActive: !userItem.isActive
                                   })}
-                                  disabled={updateUserStatusMutation.isPending || userItem.id === user.id}
+                                  disabled={updateUserStatusMutation.isPending || userItem.id === user?.id}
                                   className="flex-1 h-11"
                                   data-testid={`button-toggle-status-${userItem.id}`}
                                 >
                                   {userItem.isActive ? 'Deactivate' : 'Activate'}
                                 </Button>
-                                {userItem.id !== user.id && (
+                                {userItem.id !== user?.id && (
                                   <AlertDialog>
                                     <AlertDialogTrigger asChild>
                                       <Button

@@ -44,7 +44,7 @@ export const EmailTemplates = {
   // User registration confirmation
   registrationConfirmation: (userEmail: string, userName: string) => ({
     to: userEmail,
-    from: 'noreply@voterui.replit.app', // Replace with your verified sender
+    from: 'annaversevault@gmail.com', // Verified SendGrid sender
     subject: 'Registration Received - VoterVault Access Pending',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -69,7 +69,7 @@ export const EmailTemplates = {
   // Admin notification of new registration
   adminNotification: (adminEmail: string, userName: string, userEmail: string, userPhone: string) => ({
     to: adminEmail,
-    from: 'noreply@voterui.replit.app',
+    from: 'annaversevault@gmail.com',
     subject: 'New User Registration - Action Required',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -91,7 +91,7 @@ export const EmailTemplates = {
   // User approval notification
   approvalNotification: (userEmail: string, userName: string, role: string) => ({
     to: userEmail,
-    from: 'noreply@voterui.replit.app',
+    from: 'annaversevault@gmail.com',
     subject: 'Welcome to VoterVault - Account Approved!',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -118,7 +118,7 @@ export const EmailTemplates = {
   // User rejection notification
   rejectionNotification: (userEmail: string, userName: string, reason?: string) => ({
     to: userEmail,
-    from: 'noreply@voterui.replit.app',
+    from: 'annaversevault@gmail.com',
     subject: 'VoterVault Registration Update',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -138,7 +138,7 @@ export const EmailTemplates = {
   // Password reset email
   passwordReset: (userEmail: string, userName: string, resetToken: string) => ({
     to: userEmail,
-    from: 'noreply@voterui.replit.app',
+    from: 'annaversevault@gmail.com',
     subject: 'Reset Your VoterVault Password',
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

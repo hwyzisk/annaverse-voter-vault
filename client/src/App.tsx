@@ -6,7 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
-import Home from "@/pages/home";
+import Login from "@/pages/login";
+import HomeFull from "@/pages/home-full";
 import Admin from "@/pages/admin";
 import Register from "@/pages/register";
 
@@ -29,11 +30,12 @@ function Router() {
       {!isAuthenticated ? (
         <>
           <Route path="/" component={Landing} />
+          <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
         </>
       ) : (
         <>
-          <Route path="/" component={Home} />
+          <Route path="/" component={HomeFull} />
           <Route path="/admin" component={Admin} />
         </>
       )}
