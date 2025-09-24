@@ -612,11 +612,35 @@ export class DatabaseStorage implements IStorage {
         totalActiveVoters = -1;
       }
 
+      // Count confirmed supporters
+      let confirmedSupportersCount = 0;
+      try {
+        const [supportersResult] = await db
+          .select({ count: count() })
+          .from(contacts)
+          .where(eq(contacts.supporterStatus, 'confirmed-supporter'));
+        confirmedSupportersCount = supportersResult.count;
+      } catch (err) {
+        console.error('Error counting confirmed supporters:', err);
+      }
+
+      // Count confirmed volunteers
+      let confirmedVolunteersCount = 0;
+      try {
+        const [volunteersResult] = await db
+          .select({ count: count() })
+          .from(contacts)
+          .where(eq(contacts.volunteerLikeliness, 'confirmed-volunteer'));
+        confirmedVolunteersCount = volunteersResult.count;
+      } catch (err) {
+        console.error('Error counting confirmed volunteers:', err);
+      }
+
       return {
         totalActiveVoters,
         contactsWithNewInfo: 0,
-        confirmedSupporters: 0,
-        confirmedVolunteers: 0,
+        confirmedSupporters: confirmedSupportersCount,
+        confirmedVolunteers: confirmedVolunteersCount,
         phoneNumberPercentage: 0,
         emailAddressPercentage: 0,
         topContributors: [],

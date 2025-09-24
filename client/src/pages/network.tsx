@@ -169,7 +169,10 @@ export default function Network() {
       {!isMobile && (
         <Sidebar
           user={user}
-          onAdminClick={() => setShowAdminDashboard(true)}
+          onAdminClick={() => {
+            console.log('Admin button clicked on network page');
+            setShowAdminDashboard(true);
+          }}
         />
       )}
 

@@ -89,7 +89,10 @@ export default function Leaderboard() {
       {!isMobile && (
         <Sidebar
           user={user}
-          onAdminClick={() => setShowAdminDashboard(true)}
+          onAdminClick={() => {
+            console.log('Admin button clicked on leaderboard page');
+            setShowAdminDashboard(true);
+          }}
         />
       )}
 

@@ -9,6 +9,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ user, onAdminClick }: SidebarProps) {
+  const currentPath = window.location.pathname;
+
   const handleLogout = () => {
     window.location.href = "/api/logout";
   };
@@ -26,6 +28,15 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
+  const getLinkClassName = (path: string) => {
+    const isActive = currentPath === path;
+    return `flex items-center space-x-3 px-3 py-2 rounded-md ${
+      isActive
+        ? 'bg-primary text-primary-foreground'
+        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+    }`;
+  };
+
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
@@ -33,11 +44,11 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
           <div className="w-8 h-8 rounded-full overflow-hidden">
             <img 
               src={annaVerseIcon} 
-              alt="Annaverse Voter Vault"
+              alt="The Annaverse App"
               className="w-full h-full object-cover"
             />
           </div>
-          <h1 className="text-xl font-bold text-foreground">Annaverse Voter Vault</h1>
+          <h1 className="text-lg font-bold text-foreground whitespace-nowrap">The Annaverse App</h1>
         </div>
       </div>
       
@@ -46,7 +57,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
           <li>
             <a
               href="/"
-              className="flex items-center space-x-3 px-3 py-2 rounded-md bg-primary text-primary-foreground"
+              className={getLinkClassName('/')}
               data-testid="link-search"
             >
               <Search className="w-5 h-5" />
@@ -58,7 +69,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
             <li>
               <a
                 href="/network"
-                className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                className={getLinkClassName('/network')}
                 data-testid="link-network"
               >
                 <Heart className="w-5 h-5" />
@@ -70,7 +81,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
           <li>
             <a
               href="/leaderboard"
-              className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              className={getLinkClassName('/leaderboard')}
               data-testid="link-leaderboard"
             >
               <Trophy className="w-5 h-5" />
