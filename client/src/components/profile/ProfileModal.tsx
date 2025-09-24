@@ -33,6 +33,36 @@ interface ContactDetails extends Contact {
   auditLogs: any[];
 }
 
+// Helper functions for formatting and validation
+const formatPhoneNumber = (value: string) => {
+  // Remove all non-numeric characters
+  const numericValue = value.replace(/\D/g, '');
+
+  // Apply formatting based on length
+  if (numericValue.length <= 3) {
+    return numericValue;
+  } else if (numericValue.length <= 6) {
+    return `(${numericValue.slice(0, 3)}) ${numericValue.slice(3)}`;
+  } else if (numericValue.length <= 10) {
+    return `(${numericValue.slice(0, 3)}) ${numericValue.slice(3, 6)}-${numericValue.slice(6)}`;
+  } else {
+    // Limit to 10 digits for US phone numbers
+    return `(${numericValue.slice(0, 3)}) ${numericValue.slice(3, 6)}-${numericValue.slice(6, 10)}`;
+  }
+};
+
+const isValidEmail = (email: string) => {
+  // More comprehensive email validation
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return email.trim().length > 0 && emailRegex.test(email.trim());
+};
+
+const isValidPhoneNumber = (phone: string) => {
+  // Must be at least 10 digits for a valid US phone number
+  const numericValue = phone.replace(/\D/g, '');
+  return numericValue.length === 10;
+};
+
 export default function ProfileModal({ contact, user, isOpen, onClose }: ProfileModalProps) {
   const [isEditing, setIsEditing] = useState(false);
   const isMobile = useIsMobile();
@@ -48,6 +78,10 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   // Network state
   const [networkStatus, setNetworkStatus] = useState<{ inNetwork: boolean; networkId?: string }>({ inNetwork: false });
   const [networkLoading, setNetworkLoading] = useState(false);
+
+  // Validation state
+  const [phoneError, setPhoneError] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -181,6 +215,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
       setNewPhone({ phoneNumber: "", phoneType: "mobile" });
+      setPhoneError("");
       toast({ title: "Phone number added" });
     },
     onError: () => {
@@ -199,6 +234,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
       setNewEmail({ email: "", emailType: "personal" });
+      setEmailError("");
       toast({ title: "Email address added" });
     },
     onError: () => {
@@ -767,7 +803,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                 <Input
                                   type="tel"
                                   value={editingPhone.phoneNumber}
-                                  onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneNumber: e.target.value } : null)}
+                                  onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneNumber: formatPhoneNumber(e.target.value) } : null)}
                                   className="flex-1 h-11 text-base"
                                   data-testid={`input-edit-phone-${phone.id}`}
                                 />
@@ -862,12 +898,29 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               type="tel"
                               placeholder="Phone number..."
                               value={newPhone.phoneNumber}
-                              onChange={(e) => setNewPhone(prev => ({ ...prev, phoneNumber: e.target.value }))}
-                              className="flex-1 h-11 text-base"
+                              onChange={(e) => {
+                                const formatted = formatPhoneNumber(e.target.value);
+                                setNewPhone(prev => ({ ...prev, phoneNumber: formatted }));
+                                if (formatted && !isValidPhoneNumber(formatted)) {
+                                  setPhoneError("Please enter a valid 10-digit phone number");
+                                } else {
+                                  setPhoneError("");
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && isValidPhoneNumber(newPhone.phoneNumber)) {
+                                  e.preventDefault();
+                                  addPhoneMutation.mutate(newPhone);
+                                }
+                              }}
+                              className={`flex-1 h-11 text-base ${phoneError ? 'border-red-500' : ''}`}
                               data-testid="input-new-phone"
                             />
                           </div>
-                          <select 
+                          {phoneError && (
+                            <p className="text-sm text-red-500 px-7">{phoneError}</p>
+                          )}
+                          <select
                             value={newPhone.phoneType}
                             onChange={(e) => setNewPhone(prev => ({ ...prev, phoneType: e.target.value as any }))}
                             className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
@@ -879,8 +932,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                           </select>
                           <Button
                             size="default"
-                            onClick={() => newPhone.phoneNumber && addPhoneMutation.mutate(newPhone)}
-                            disabled={!newPhone.phoneNumber || addPhoneMutation.isPending}
+                            onClick={() => isValidPhoneNumber(newPhone.phoneNumber) && addPhoneMutation.mutate(newPhone)}
+                            disabled={!isValidPhoneNumber(newPhone.phoneNumber) || addPhoneMutation.isPending}
                             className="w-full h-11"
                             data-testid="button-add-phone"
                           >
@@ -994,11 +1047,28 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               type="email"
                               placeholder="Email address..."
                               value={newEmail.email}
-                              onChange={(e) => setNewEmail(prev => ({ ...prev, email: e.target.value }))}
-                              className="flex-1 h-11 text-base"
+                              onChange={(e) => {
+                                const email = e.target.value;
+                                setNewEmail(prev => ({ ...prev, email }));
+                                if (email && !isValidEmail(email)) {
+                                  setEmailError("Please enter a valid email address");
+                                } else {
+                                  setEmailError("");
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && isValidEmail(newEmail.email)) {
+                                  e.preventDefault();
+                                  addEmailMutation.mutate(newEmail);
+                                }
+                              }}
+                              className={`flex-1 h-11 text-base ${emailError ? 'border-red-500' : ''}`}
                               data-testid="input-new-email"
                             />
                           </div>
+                          {emailError && (
+                            <p className="text-sm text-red-500 px-7">{emailError}</p>
+                          )}
                           <select
                             value={newEmail.emailType}
                             onChange={(e) => setNewEmail(prev => ({ ...prev, emailType: e.target.value as any }))}
@@ -1010,8 +1080,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                           </select>
                           <Button
                             size="default"
-                            onClick={() => newEmail.email && addEmailMutation.mutate(newEmail)}
-                            disabled={!newEmail.email || addEmailMutation.isPending}
+                            onClick={() => isValidEmail(newEmail.email) && addEmailMutation.mutate(newEmail)}
+                            disabled={!isValidEmail(newEmail.email) || addEmailMutation.isPending}
                             className="w-full h-11"
                             data-testid="button-add-email"
                           >
@@ -1539,7 +1609,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                 <Phone className="w-4 h-4 text-muted-foreground" />
                                 <Input
                                   value={editingPhone.phoneNumber}
-                                  onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneNumber: e.target.value } : null)}
+                                  onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneNumber: formatPhoneNumber(e.target.value) } : null)}
                                   className="flex-1"
                                   data-testid={`input-edit-phone-${phone.id}`}
                                 />
@@ -1622,7 +1692,13 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             <Input
                               placeholder="Phone number..."
                               value={newPhone.phoneNumber}
-                              onChange={(e) => setNewPhone(prev => ({ ...prev, phoneNumber: e.target.value }))}
+                              onChange={(e) => setNewPhone(prev => ({ ...prev, phoneNumber: formatPhoneNumber(e.target.value) }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && isValidPhoneNumber(newPhone.phoneNumber)) {
+                                  e.preventDefault();
+                                  addPhoneMutation.mutate(newPhone);
+                                }
+                              }}
                               className="flex-1"
                               data-testid="input-new-phone"
                             />
@@ -1638,8 +1714,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             </select>
                             <Button
                               size="sm"
-                              onClick={() => newPhone.phoneNumber && addPhoneMutation.mutate(newPhone)}
-                              disabled={!newPhone.phoneNumber || addPhoneMutation.isPending}
+                              onClick={() => isValidPhoneNumber(newPhone.phoneNumber) && addPhoneMutation.mutate(newPhone)}
+                              disabled={!isValidPhoneNumber(newPhone.phoneNumber) || addPhoneMutation.isPending}
                               data-testid="button-add-phone"
                             >
                               <Plus className="w-4 h-4" />
@@ -1746,10 +1822,27 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               type="email"
                               placeholder="Email address..."
                               value={newEmail.email}
-                              onChange={(e) => setNewEmail(prev => ({ ...prev, email: e.target.value }))}
-                              className="flex-1"
+                              onChange={(e) => {
+                                const email = e.target.value;
+                                setNewEmail(prev => ({ ...prev, email }));
+                                if (email && !isValidEmail(email)) {
+                                  setEmailError("Please enter a valid email address");
+                                } else {
+                                  setEmailError("");
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && isValidEmail(newEmail.email)) {
+                                  e.preventDefault();
+                                  addEmailMutation.mutate(newEmail);
+                                }
+                              }}
+                              className={`flex-1 ${emailError ? 'border-red-500' : ''}`}
                               data-testid="input-new-email"
                             />
+                            {emailError && (
+                              <p className="text-sm text-red-500 px-2">{emailError}</p>
+                            )}
                             <select
                               value={newEmail.emailType}
                               onChange={(e) => setNewEmail(prev => ({ ...prev, emailType: e.target.value as any }))}
@@ -1761,8 +1854,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             </select>
                             <Button
                               size="sm"
-                              onClick={() => newEmail.email && addEmailMutation.mutate(newEmail)}
-                              disabled={!newEmail.email || addEmailMutation.isPending}
+                              onClick={() => isValidEmail(newEmail.email) && addEmailMutation.mutate(newEmail)}
+                              disabled={!isValidEmail(newEmail.email) || addEmailMutation.isPending}
                               data-testid="button-add-email"
                             >
                               <Plus className="w-4 h-4" />
