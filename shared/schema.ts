@@ -66,6 +66,10 @@ export const contacts = pgTable("contacts", {
   zipCode: text("zip_code"),
   district: text("district"),
   precinct: text("precinct"),
+  houseDistrict: text("house_district"),
+  senateDistrict: text("senate_district"),
+  commissionDistrict: text("commission_district"),
+  schoolBoardDistrict: text("school_board_district"),
   // Voter-specific fields
   voterIdRedacted: varchar("voter_id_redacted"), // For privacy compliance
   registrationDate: date("registration_date"),

@@ -219,6 +219,10 @@ class ExcelService {
         voterStatus: row.Voter_Status ? String(row.Voter_Status).trim() : null,
         district: row.Congressional_District ? String(row.Congressional_District).trim() : null,
         precinct: row.Precinct ? String(row.Precinct).trim() : null,
+        houseDistrict: row.House_District ? String(row.House_District).trim() : null,
+        senateDistrict: row.Senate_District ? String(row.Senate_District).trim() : null,
+        commissionDistrict: row.Commission_District ? String(row.Commission_District).trim() : null,
+        schoolBoardDistrict: row.School_Board_District ? String(row.School_Board_District).trim() : null,
         supporterStatus: 'unknown',
         notes: null,
       };

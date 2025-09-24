@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { getPartyColor, formatParty } from "@/lib/utils";
-import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History } from "lucide-react";
+import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History, Lock } from "lucide-react";
 import type { Contact, User, ContactPhone, ContactEmail, ContactAlias } from "@shared/schema";
 
 interface ProfileModalProps {
@@ -37,8 +37,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   const [isEditing, setIsEditing] = useState(false);
   const isMobile = useIsMobile();
   const [notes, setNotes] = useState(contact.notes || "");
-  const [supporterStatus, setSupporterStatus] = useState(contact.supporterStatus || "unknown");
-  const [volunteerLikeliness, setVolunteerLikeliness] = useState(contact.volunteerLikeliness || "unknown");
+  const [supporterStatus, setSupporterStatus] = useState(contact.supporterStatus ?? "unknown");
+  const [volunteerLikeliness, setVolunteerLikeliness] = useState(contact.volunteerLikeliness ?? "unknown");
   const [newAlias, setNewAlias] = useState("");
   const [newPhone, setNewPhone] = useState({ phoneNumber: "", phoneType: "mobile" as const });
   const [newEmail, setNewEmail] = useState({ email: "", emailType: "personal" as const });
@@ -48,14 +48,22 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Sync local state with contact data when it changes (but not while editing)
+  // Sync local state with contact data when component mounts or contact changes
+  useEffect(() => {
+    setSupporterStatus(contact.supporterStatus ?? "unknown");
+    setVolunteerLikeliness(contact.volunteerLikeliness ?? "unknown");
+    setNotes(contact.notes || "");
+    setIsEditing(false);
+  }, [contact.id]);
+
+  // Update state when contact data changes externally (but not while editing)
   useEffect(() => {
     if (!isEditing) {
-      setSupporterStatus(contact.supporterStatus || "unknown");
-      setVolunteerLikeliness(contact.volunteerLikeliness || "unknown");
+      setSupporterStatus(contact.supporterStatus ?? "unknown");
+      setVolunteerLikeliness(contact.volunteerLikeliness ?? "unknown");
       setNotes(contact.notes || "");
     }
-  }, [contact.supporterStatus, contact.volunteerLikeliness, contact.notes, isEditing]);
+  }, [contact.supporterStatus, contact.volunteerLikeliness, contact.notes]);
 
   const { data: contactDetails, isLoading } = useQuery<ContactDetails>({
     queryKey: ['/api/contacts', contact.id],
@@ -250,6 +258,30 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     return age;
   };
 
+  const calculateYearsSinceRegistration = (registrationDate: string | null) => {
+    if (!registrationDate) return null;
+    const today = new Date();
+    const regDate = new Date(registrationDate);
+    let years = today.getFullYear() - regDate.getFullYear();
+    const monthDiff = today.getMonth() - regDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < regDate.getDate())) {
+      years--;
+    }
+    return years;
+  };
+
+  const formatVoterStatus = (status: string | null) => {
+    if (!status) return 'Unknown';
+    switch (status.toUpperCase()) {
+      case 'ACT':
+        return 'Active';
+      case 'INACT':
+        return 'Inactive';
+      default:
+        return status;
+    }
+  };
+
   const canEdit = user.role === 'admin' || user.role === 'editor';
 
   if (isLoading) {
@@ -382,10 +414,13 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     ) : (
                       <Badge
                         variant={
-                          details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' :
+                          details.supporterStatus === 'confirmed-supporter' ? 'default' :
+                          details.supporterStatus === 'likely-supporter' ? 'secondary' :
                           details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
                         }
-                        className="text-sm px-3 py-1"
+                        className={`text-sm px-3 py-1 ${
+                          details.supporterStatus === 'likely-supporter' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : ''
+                        }`}
                         data-testid="badge-supporter-status"
                       >
                         {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' :
@@ -453,33 +488,51 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
               {/* Identity Information */}
               <AccordionItem value="identity">
                 <AccordionTrigger className="h-12 text-base font-medium">
-                  Identity Information
+                  <div className="flex items-center gap-2">
+                    <span>Identity Information</span>
+                    <Lock className="w-4 h-4 text-yellow-500" />
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-6 space-y-4">
                   <div>
                     <Label className="text-sm text-muted-foreground">Full Name</Label>
                     <p className="text-base mt-1">{details.fullName}</p>
-                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Date of Birth</Label>
-                    <p className="text-base mt-1">
-                      {details.dateOfBirth ? (
-                        <>
-                          {new Date(details.dateOfBirth).toLocaleDateString()} (Age {calculateAge(details.dateOfBirth)})
-                        </>
-                      ) : (
-                        'Not provided'
+                    <Label className="text-sm text-muted-foreground">Age</Label>
+                    <div className="mt-1">
+                      <p className="text-base">{calculateAge(details.dateOfBirth) || 'N/A'}</p>
+                      {details.dateOfBirth && (
+                        <p className="text-sm text-muted-foreground">{new Date(details.dateOfBirth).toLocaleDateString()}</p>
                       )}
-                    </p>
-                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Party Affiliation</Label>
                     <p className={`text-base mt-1 font-medium ${getPartyColor(details.party)}`} data-testid="text-party">
                       {formatParty(details.party)}
                     </p>
-                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Voter Status</Label>
+                    <p className="text-base mt-1">{formatVoterStatus(details.voterStatus)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-muted-foreground">Registration Status</Label>
+                    <div className="mt-1">
+                      {details.registrationDate ? (
+                        <>
+                          <p className="text-base font-medium">
+                            Registered for {calculateYearsSinceRegistration(details.registrationDate)} years
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Since: {new Date(details.registrationDate).toLocaleDateString()}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-base">Not provided</p>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <Label className="text-sm text-muted-foreground">Aliases/Nicknames</Label>
@@ -529,36 +582,26 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
               {/* Address Information */}
               <AccordionItem value="address">
                 <AccordionTrigger className="h-12 text-base font-medium">
-                  Address Information
+                  <div className="flex items-center gap-2">
+                    <span>Address Information</span>
+                    <Lock className="w-4 h-4 text-yellow-500" />
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-6 space-y-4">
                   <div>
                     <Label className="text-sm text-muted-foreground">Street Address</Label>
                     <p className="text-base mt-1">{details.streetAddress || 'Not provided'}</p>
-                    <span className="text-xs text-muted-foreground">🔒 Locked field</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm text-muted-foreground">City</Label>
                       <p className="text-base mt-1">{details.city || 'Not provided'}</p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
                     </div>
                     <div>
                       <Label className="text-sm text-muted-foreground">State / ZIP</Label>
                       <p className="text-base mt-1">
                         {details.state || 'N/A'} {details.zipCode || ''}
                       </p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Congressional District</Label>
-                      <p className="text-base mt-1">{details.district || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-sm text-muted-foreground">Precinct</Label>
-                      <p className="text-base mt-1">{details.precinct || 'Not provided'}</p>
                     </div>
                   </div>
                 </AccordionContent>
@@ -915,6 +958,44 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 </AccordionContent>
               </AccordionItem>
 
+              {/* District Information */}
+              <AccordionItem value="districts">
+                <AccordionTrigger className="h-12 text-base font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>District Information</span>
+                    <Lock className="w-4 h-4 text-yellow-500" />
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Precinct</Label>
+                      <p className="text-base mt-1">{details.precinct || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Congressional District</Label>
+                      <p className="text-base mt-1">{details.district || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">House District</Label>
+                      <p className="text-base mt-1">{details.houseDistrict || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Senate District</Label>
+                      <p className="text-base mt-1">{details.senateDistrict || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">Commission District</Label>
+                      <p className="text-base mt-1">{details.commissionDistrict || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-muted-foreground">School Board District</Label>
+                      <p className="text-base mt-1">{details.schoolBoardDistrict || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
               {/* Activity Timeline */}
               <AccordionItem value="activity">
                 <AccordionTrigger className="h-12 text-base font-medium">
@@ -1084,8 +1165,12 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     ) : (
                       <Badge
                         variant={
-                          details.supporterStatus === 'confirmed-supporter' || details.supporterStatus === 'likely-supporter' ? 'default' :
+                          details.supporterStatus === 'confirmed-supporter' ? 'default' :
+                          details.supporterStatus === 'likely-supporter' ? 'secondary' :
                           details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
+                        }
+                        className={
+                          details.supporterStatus === 'likely-supporter' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : ''
                         }
                         data-testid="badge-supporter-status"
                       >
@@ -1153,33 +1238,51 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
               {/* Identity Information */}
               <Card>
                   <CardHeader>
-                    <CardTitle>Identity Information</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <span>Identity Information</span>
+                      <Lock className="w-4 h-4 text-yellow-500" />
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-muted-foreground">Full Name</Label>
                       <p className="text-sm mt-1">{details.fullName}</p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
                     </div>
                     <div>
-                      <Label className="text-muted-foreground">Date of Birth</Label>
-                      <p className="text-sm mt-1">
-                        {details.dateOfBirth ? (
-                          <>
-                            {new Date(details.dateOfBirth).toLocaleDateString()} (Age {calculateAge(details.dateOfBirth)})
-                          </>
-                        ) : (
-                          'Not provided'
+                      <Label className="text-muted-foreground">Age</Label>
+                      <div className="mt-1">
+                        <p className="text-sm">{calculateAge(details.dateOfBirth) || 'N/A'}</p>
+                        {details.dateOfBirth && (
+                          <p className="text-xs text-muted-foreground">{new Date(details.dateOfBirth).toLocaleDateString()}</p>
                         )}
-                      </p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                      </div>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">Party Affiliation</Label>
                       <p className={`text-sm mt-1 font-medium ${getPartyColor(details.party)}`} data-testid="text-party">
                         {formatParty(details.party)}
                       </p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Voter Status</Label>
+                      <p className="text-sm mt-1">{formatVoterStatus(details.voterStatus)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Registration Status</Label>
+                      <div className="mt-1">
+                        {details.registrationDate ? (
+                          <>
+                            <p className="text-sm font-medium">
+                              Registered for {calculateYearsSinceRegistration(details.registrationDate)} years
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Since: {new Date(details.registrationDate).toLocaleDateString()}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-sm">Not provided</p>
+                        )}
+                      </div>
                     </div>
                     <div className="col-span-2">
                       <Label className="text-muted-foreground">Aliases/Nicknames</Label>
@@ -1221,33 +1324,25 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 {/* Address Information */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Address Information</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <span>Address Information</span>
+                      <Lock className="w-4 h-4 text-yellow-500" />
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <Label className="text-muted-foreground">Street Address</Label>
                       <p className="text-sm mt-1">{details.streetAddress || 'Not provided'}</p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">City</Label>
                       <p className="text-sm mt-1">{details.city || 'Not provided'}</p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
                     </div>
                     <div>
                       <Label className="text-muted-foreground">State / ZIP</Label>
                       <p className="text-sm mt-1">
                         {details.state || 'N/A'} {details.zipCode || ''}
                       </p>
-                      <span className="text-xs text-muted-foreground">🔒 Locked field</span>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Congressional District</Label>
-                      <p className="text-sm mt-1">{details.district || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Precinct</Label>
-                      <p className="text-sm mt-1">{details.precinct || 'Not provided'}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -1590,6 +1685,46 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     )}
                   </CardContent>
                 </Card>
+
+                {/* District Information */}
+                <Accordion type="multiple" defaultValue={[]} className="border rounded-lg">
+                  <AccordionItem value="districts">
+                    <AccordionTrigger className="px-6 py-4 text-base font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>District Information</span>
+                        <Lock className="w-4 h-4 text-yellow-500" />
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 pb-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-muted-foreground">Precinct</Label>
+                          <p className="text-sm mt-1">{details.precinct || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Congressional District</Label>
+                          <p className="text-sm mt-1">{details.district || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">House District</Label>
+                          <p className="text-sm mt-1">{details.houseDistrict || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Senate District</Label>
+                          <p className="text-sm mt-1">{details.senateDistrict || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Commission District</Label>
+                          <p className="text-sm mt-1">{details.commissionDistrict || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">School Board District</Label>
+                          <p className="text-sm mt-1">{details.schoolBoardDistrict || 'Not provided'}</p>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
 
                 {/* Activity Timeline */}
                 <Card>

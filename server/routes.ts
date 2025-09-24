@@ -209,10 +209,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update user to admin status
-      await storage.updateUser(user.id, {
-        role: 'admin',
-        status: 'approved'
-      });
+      await storage.updateUserRole(user.id, 'admin');
+      await storage.updateUserStatus(user.id, true);
 
       res.json({ success: true, message: `User ${email} promoted to admin` });
     } catch (error) {
