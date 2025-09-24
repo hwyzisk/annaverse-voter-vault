@@ -285,10 +285,11 @@ export default function Leaderboard() {
           />
         )}
 
-        {showAdminDashboard && (
+        {showAdminDashboard && user.role === 'admin' && (
           <AdminDashboard
-            open={showAdminDashboard}
-            onOpenChange={setShowAdminDashboard}
+            isOpen={showAdminDashboard}
+            onClose={() => setShowAdminDashboard(false)}
+            user={user}
           />
         )}
 

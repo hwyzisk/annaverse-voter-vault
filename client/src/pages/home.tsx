@@ -51,7 +51,20 @@ export default function Home() {
         />
         
         <div className="flex-1 overflow-auto">
-          <SearchInterface onContactSelect={setSelectedContact} />
+          <div className="max-w-7xl mx-auto p-6">
+            {/* Header Section */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <Search className="h-8 w-8 text-primary" />
+                <h1 className="text-3xl font-bold">Contact Search</h1>
+              </div>
+              <p className="text-muted-foreground">
+                Search and manage your voter contacts database.
+              </p>
+            </div>
+
+            <SearchInterface onContactSelect={setSelectedContact} />
+          </div>
         </div>
       </main>
 

@@ -56,10 +56,6 @@ export default function Header({ user, onProfileClick, onNotificationClick, onMo
               <Menu className="w-5 h-5" />
             </Button>
           )}
-          <h2 className="text-lg font-semibold">Contact Search</h2>
-          <span className="text-sm text-muted-foreground" data-testid="text-total-contacts">
-            Loading contacts...
-          </span>
         </div>
         <div className="flex items-center space-x-3">
           
