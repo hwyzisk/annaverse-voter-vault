@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Phone, Mail, AlertTriangle, Search, Eye } from "lucide-react";
+import { Phone, Mail, AlertTriangle, Search, Eye, Heart } from "lucide-react";
 import { getPartyColor, formatParty } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
 
@@ -21,6 +22,8 @@ interface SearchResultsProps {
 
 export default function SearchResults({ nameSearch, filters, onContactSelect }: SearchResultsProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [networkContacts, setNetworkContacts] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
   const isMobile = useIsMobile();
   const limit = 20;
 
@@ -64,6 +67,37 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
       return response.json();
     },
   });
+
+  // Fetch user's network contacts when component mounts
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'editor')) {
+      fetchNetworkContacts();
+    }
+  }, [user]);
+
+  const fetchNetworkContacts = async () => {
+    try {
+      const response = await fetch('/api/networks', {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const networks = await response.json();
+        const contactIds = new Set<string>();
+        networks.forEach((network: any) => {
+          if (network.contactId) {
+            contactIds.add(network.contactId);
+          }
+        });
+        setNetworkContacts(contactIds);
+      }
+    } catch (error) {
+      console.error('Error fetching network contacts:', error);
+    }
+  };
+
+  const isInNetwork = (contactId: string) => {
+    return networkContacts.has(contactId);
+  };
 
   const calculateAge = (dateOfBirth: string | null) => {
     if (!dateOfBirth) return null;
@@ -179,13 +213,18 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                       data-testid={`row-contact-${contact.id}`}
                     >
                       <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium" data-testid={`text-name-${contact.id}`}>
-                            {contact.fullName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            ID: {contact.systemId}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <p className="font-medium flex items-center gap-2" data-testid={`text-name-${contact.id}`}>
+                              {contact.fullName}
+                              {user && (user.role === 'admin' || user.role === 'editor') && isInNetwork(contact.id) && (
+                                <Heart className="w-4 h-4 text-red-500 fill-current" />
+                              )}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              ID: {contact.systemId}
+                            </p>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm" data-testid={`text-age-${contact.id}`}>
@@ -247,8 +286,11 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                     <div className="flex-1 min-w-0">
                       {/* Name and ID */}
                       <div className="mb-2">
-                        <h4 className="font-medium text-base truncate" data-testid={`text-name-${contact.id}`}>
+                        <h4 className="font-medium text-base truncate flex items-center gap-2" data-testid={`text-name-${contact.id}`}>
                           {contact.fullName}
+                          {user && (user.role === 'admin' || user.role === 'editor') && isInNetwork(contact.id) && (
+                            <Heart className="w-4 h-4 text-red-500 fill-current flex-shrink-0" />
+                          )}
                         </h4>
                         <p className="text-sm text-muted-foreground">
                           ID: {contact.systemId}

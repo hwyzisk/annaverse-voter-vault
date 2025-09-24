@@ -106,9 +106,9 @@ export default function Login() {
               className="w-full h-full object-cover rounded-full"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-          <CardDescription>
-            Welcome back to AnnaVerse
+          <CardTitle className="text-2xl font-bold">The Annaverse App</CardTitle>
+          <CardDescription className="text-center">
+            Access your account to continue
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -142,30 +142,18 @@ export default function Login() {
               className="w-full"
               disabled={loginMutation.isPending}
             >
-              {loginMutation.isPending ? "Signing In..." : "Sign In"}
+              {loginMutation.isPending ? "Logging in..." : "Login"}
             </Button>
           </form>
 
           <div className="mt-6 space-y-4">
-            <div className="text-center">
-              <Link href="/register" className="text-sm text-primary hover:underline">
-                Don't have an account? Request to join
-              </Link>
-            </div>
-
-            <div className="text-center">
-              <button
-                type="button"
-                className="text-sm text-muted-foreground hover:text-primary hover:underline"
-                onClick={() => {
-                  toast({
-                    title: "Password Reset",
-                    description: "Password reset functionality will be available soon",
-                  });
-                }}
-              >
+            <div className="text-center space-y-2">
+              <Link href="/forgot-password" className="text-sm text-primary hover:underline block">
                 Forgot your password?
-              </button>
+              </Link>
+              <Link href="/register" className="text-sm text-primary hover:underline">
+                Don't have an account? Register here
+              </Link>
             </div>
           </div>
         </CardContent>

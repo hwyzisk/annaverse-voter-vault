@@ -9,6 +9,7 @@ import {
   integer,
   boolean,
   date,
+  unique,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
@@ -146,6 +147,19 @@ export const systemSettings = pgTable("system_settings", {
   updatedBy: varchar("updated_by").references(() => users.id),
 });
 
+// User Networks - Personal contact favorites/shortlist
+export const userNetworks = pgTable("user_networks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: 'cascade' }),
+  notes: text("notes"), // Optional personal notes about this contact
+  createdAt: timestamp("created_at").default(sql`now()`).notNull(),
+  updatedAt: timestamp("updated_at").default(sql`now()`).notNull(),
+}, (table) => ({
+  // Ensure each user can only add a contact once to their network
+  uniqueUserContact: unique().on(table.userId, table.contactId),
+}));
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   contactsUpdated: many(contacts),
@@ -153,6 +167,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   emailsCreated: many(contactEmails),
   auditLogs: many(auditLogs),
   systemSettings: many(systemSettings),
+  networks: many(userNetworks),
 }));
 
 export const contactsRelations = relations(contacts, ({ one, many }) => ({
@@ -164,6 +179,7 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
   phones: many(contactPhones),
   emails: many(contactEmails),
   auditLogs: many(auditLogs),
+  userNetworks: many(userNetworks),
 }));
 
 export const contactAliasesRelations = relations(contactAliases, ({ one }) => ({
@@ -206,6 +222,17 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+export const userNetworksRelations = relations(userNetworks, ({ one }) => ({
+  user: one(users, {
+    fields: [userNetworks.userId],
+    references: [users.id],
+  }),
+  contact: one(contacts, {
+    fields: [userNetworks.contactId],
+    references: [contacts.id],
+  }),
+}));
+
 // Zod schemas
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
@@ -240,6 +267,8 @@ export const insertContactAliasSchema = createInsertSchema(contactAliases);
 export const insertContactPhoneSchema = createInsertSchema(contactPhones);
 export const insertContactEmailSchema = createInsertSchema(contactEmails);
 export const insertAuditLogSchema = createInsertSchema(auditLogs);
+export const insertUserNetworkSchema = createInsertSchema(userNetworks);
+export const updateUserNetworkSchema = createInsertSchema(userNetworks).partial();
 
 // Client-facing schemas (exclude data source flags - backend controls these)
 export const clientInsertContactPhoneSchema = insertContactPhoneSchema.omit({ 
@@ -296,3 +325,6 @@ export type ClientInsertContactEmail = z.infer<typeof clientInsertContactEmailSc
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;
+export type UserNetwork = typeof userNetworks.$inferSelect;
+export type InsertUserNetwork = typeof userNetworks.$inferInsert;
+export type UpdateUserNetwork = z.infer<typeof updateUserNetworkSchema>;

@@ -7,7 +7,7 @@ import { excelService } from "./services/excelService";
 import { excelBatchService } from "./services/excelBatchService";
 import { auditService } from "./services/auditService";
 import { AuthService } from "./authService";
-import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactAliasSchema } from "@shared/schema";
+import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactAliasSchema, insertUserNetworkSchema, updateUserNetworkSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 
@@ -542,6 +542,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/admin/clear-all-contacts', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      await storage.clearAllContacts();
+      res.json({ message: "All contacts and related data have been cleared successfully" });
+    } catch (error) {
+      console.error("Error clearing all contacts:", error);
+      res.status(500).json({ message: "Failed to clear contacts" });
+    }
+  });
+
   app.get('/api/admin/audit-logs', isAuthenticated, requireRole(['admin']), async (req, res) => {
     try {
       const { userId, limit = 100 } = req.query;
@@ -812,6 +822,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generic fallback - don't leak internal error details
       return res.status(500).json({ message: "Internal server error processing file" });
+    }
+  });
+
+  // Leaderboard endpoints
+  app.get('/api/leaderboard/stats', isAuthenticated, async (req, res) => {
+    try {
+      const stats = await storage.getLeaderboardStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching leaderboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboard stats" });
+    }
+  });
+
+  // Networks endpoints
+  app.get('/api/networks', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+    try {
+      const networks = await storage.getUserNetworks(req.currentUser.id);
+      res.json(networks);
+    } catch (error) {
+      console.error('Error getting user networks:', error);
+      res.status(500).json({ message: 'Failed to get user networks' });
+    }
+  });
+
+  // Add contact to user's network
+  app.post('/api/networks', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+    try {
+      const networkData = insertUserNetworkSchema.parse({
+        ...req.body,
+        userId: req.currentUser.id
+      });
+
+      // Check if contact already exists in user's network
+      const existingNetwork = await storage.getUserNetwork(req.currentUser.id, networkData.contactId);
+      if (existingNetwork) {
+        return res.status(409).json({ message: 'Contact already in your network' });
+      }
+
+      const network = await storage.addToUserNetwork(networkData);
+      res.json(network);
+    } catch (error) {
+      console.error('Error adding to user network:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid network data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to add contact to network' });
+    }
+  });
+
+  // Update network (notes)
+  app.put('/api/networks/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+    try {
+      const networkId = req.params.id;
+      const updateData = updateUserNetworkSchema.parse(req.body);
+
+      // Verify the network belongs to the current user
+      const network = await storage.getNetworkById(networkId);
+      if (!network) {
+        return res.status(404).json({ message: 'Network entry not found' });
+      }
+      if (network.userId !== req.currentUser.id) {
+        return res.status(403).json({ message: 'Access denied - not your network' });
+      }
+
+      const updatedNetwork = await storage.updateUserNetwork(networkId, updateData);
+      res.json(updatedNetwork);
+    } catch (error) {
+      console.error('Error updating user network:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid network data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to update network entry' });
+    }
+  });
+
+  // Remove contact from user's network
+  app.delete('/api/networks/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+    try {
+      const networkId = req.params.id;
+
+      // Verify the network belongs to the current user
+      const network = await storage.getNetworkById(networkId);
+      if (!network) {
+        return res.status(404).json({ message: 'Network entry not found' });
+      }
+      if (network.userId !== req.currentUser.id) {
+        return res.status(403).json({ message: 'Access denied - not your network' });
+      }
+
+      await storage.removeFromUserNetwork(networkId);
+      res.json({ message: 'Contact removed from network successfully' });
+    } catch (error) {
+      console.error('Error removing from user network:', error);
+      res.status(500).json({ message: 'Failed to remove contact from network' });
+    }
+  });
+
+  // Check if contact is in user's network
+  app.get('/api/networks/check/:contactId', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+    try {
+      const contactId = req.params.contactId;
+      const network = await storage.getUserNetwork(req.currentUser.id, contactId);
+      res.json({ inNetwork: !!network, networkId: network?.id });
+    } catch (error) {
+      console.error('Error checking user network:', error);
+      res.status(500).json({ message: 'Failed to check network status' });
     }
   });
 

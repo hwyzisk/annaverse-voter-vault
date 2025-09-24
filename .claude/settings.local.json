@@ -6,7 +6,12 @@
       "Bash(taskkill:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run check:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_Fa4Ri6TyAUuL@ep-broad-darkness-ads8szkj-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/verify-cleanup.ts)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_Fa4Ri6TyAUuL@ep-broad-darkness-ads8szkj-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/debug-districts.ts)",
+      "Bash(npx tsx:*)",
+      "Bash(xargs ls:*)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []

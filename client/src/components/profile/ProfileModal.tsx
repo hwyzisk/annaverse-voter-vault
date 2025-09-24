@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { getPartyColor, formatParty } from "@/lib/utils";
-import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History, Lock } from "lucide-react";
+import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History, Lock, Heart, HeartOff } from "lucide-react";
 import type { Contact, User, ContactPhone, ContactEmail, ContactAlias } from "@shared/schema";
 
 interface ProfileModalProps {
@@ -44,7 +44,11 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   const [newEmail, setNewEmail] = useState({ email: "", emailType: "personal" as const });
   const [editingPhone, setEditingPhone] = useState<{ id: string; phoneNumber: string; phoneType: string } | null>(null);
   const [editingEmail, setEditingEmail] = useState<{ id: string; email: string; emailType: string } | null>(null);
-  
+
+  // Network state
+  const [networkStatus, setNetworkStatus] = useState<{ inNetwork: boolean; networkId?: string }>({ inNetwork: false });
+  const [networkLoading, setNetworkLoading] = useState(false);
+
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -64,6 +68,76 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
       setNotes(contact.notes || "");
     }
   }, [contact.supporterStatus, contact.volunteerLikeliness, contact.notes]);
+
+  // Check network status when modal opens or contact changes
+  useEffect(() => {
+    if (isOpen && contact.id && (user.role === 'admin' || user.role === 'editor')) {
+      checkNetworkStatus();
+    }
+  }, [isOpen, contact.id, user.role]);
+
+  const checkNetworkStatus = async () => {
+    try {
+      const response = await fetch(`/api/networks/check/${contact.id}`, {
+        credentials: 'include',
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNetworkStatus({ inNetwork: data.inNetwork, networkId: data.networkId });
+      }
+    } catch (error) {
+      console.error('Error checking network status:', error);
+    }
+  };
+
+  const toggleNetwork = async () => {
+    if (networkLoading) return;
+
+    setNetworkLoading(true);
+    try {
+      if (networkStatus.inNetwork && networkStatus.networkId) {
+        // Remove from network
+        const response = await fetch(`/api/networks/${networkStatus.networkId}`, {
+          method: 'DELETE',
+          credentials: 'include',
+        });
+        if (response.ok) {
+          setNetworkStatus({ inNetwork: false });
+          toast({
+            title: "Removed from network",
+            description: `${contact.fullName} has been removed from your network.`,
+          });
+        }
+      } else {
+        // Add to network
+        const response = await fetch('/api/networks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ contactId: contact.id }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setNetworkStatus({ inNetwork: true, networkId: data.id });
+          toast({
+            title: "Added to network",
+            description: `${contact.fullName} has been added to your network.`,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling network:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update network status.",
+        variant: "destructive",
+      });
+    } finally {
+      setNetworkLoading(false);
+    }
+  };
 
   const { data: contactDetails, isLoading } = useQuery<ContactDetails>({
     queryKey: ['/api/contacts', contact.id],
@@ -353,17 +427,37 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   </p>
                 </div>
               </div>
-              {canEdit && (
-                <Button
-                  size="default"
-                  onClick={isEditing ? handleSave : () => setIsEditing(true)}
-                  className="h-11 px-4"
-                  data-testid="button-edit"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  {isEditing ? 'Save' : 'Edit'}
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {canEdit && (
+                  <Button
+                    variant="outline"
+                    size="default"
+                    onClick={toggleNetwork}
+                    disabled={networkLoading}
+                    className="h-11 px-3"
+                    data-testid="button-network-toggle"
+                  >
+                    {networkLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    ) : networkStatus.inNetwork ? (
+                      <HeartOff className="w-4 h-4" />
+                    ) : (
+                      <Heart className="w-4 h-4" />
+                    )}
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button
+                    size="default"
+                    onClick={isEditing ? handleSave : () => setIsEditing(true)}
+                    className="h-11 px-4"
+                    data-testid="button-edit"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    {isEditing ? 'Save' : 'Edit'}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -413,13 +507,11 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       </RadioGroup>
                     ) : (
                       <Badge
-                        variant={
-                          details.supporterStatus === 'confirmed-supporter' ? 'default' :
-                          details.supporterStatus === 'likely-supporter' ? 'secondary' :
-                          details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
-                        }
                         className={`text-sm px-3 py-1 ${
-                          details.supporterStatus === 'likely-supporter' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : ''
+                          details.supporterStatus === 'confirmed-supporter' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                          details.supporterStatus === 'likely-supporter' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                          details.supporterStatus === 'opposition' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
                         }`}
                         data-testid="badge-supporter-status"
                       >
@@ -469,11 +561,12 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       </RadioGroup>
                     ) : (
                       <Badge
-                        variant={
-                          details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' :
-                          details.volunteerLikeliness === 'will-not-volunteer' ? 'destructive' : 'secondary'
-                        }
-                        className="text-sm px-3 py-1"
+                        className={`text-sm px-3 py-1 ${
+                          details.volunteerLikeliness === 'confirmed-volunteer' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                          details.volunteerLikeliness === 'likely-to-volunteer' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                          details.volunteerLikeliness === 'will-not-volunteer' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                        }`}
                         data-testid="badge-volunteer-likeliness"
                       >
                         {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' :
@@ -1106,6 +1199,25 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 </Button>
                 {canEdit && (
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleNetwork}
+                    disabled={networkLoading}
+                    className={networkStatus.inNetwork ? "text-destructive hover:text-destructive" : ""}
+                    data-testid="button-network-toggle"
+                  >
+                    {networkLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    ) : networkStatus.inNetwork ? (
+                      <HeartOff className="w-4 h-4 mr-2" />
+                    ) : (
+                      <Heart className="w-4 h-4 mr-2" />
+                    )}
+                    {networkStatus.inNetwork ? 'Remove' : 'Add to Network'}
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button
                     size="sm"
                     onClick={isEditing ? handleSave : () => setIsEditing(true)}
                     data-testid="button-edit"
@@ -1164,14 +1276,12 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       </RadioGroup>
                     ) : (
                       <Badge
-                        variant={
-                          details.supporterStatus === 'confirmed-supporter' ? 'default' :
-                          details.supporterStatus === 'likely-supporter' ? 'secondary' :
-                          details.supporterStatus === 'opposition' ? 'destructive' : 'secondary'
-                        }
-                        className={
-                          details.supporterStatus === 'likely-supporter' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : ''
-                        }
+                        className={`text-sm px-3 py-1 ${
+                          details.supporterStatus === 'confirmed-supporter' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                          details.supporterStatus === 'likely-supporter' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                          details.supporterStatus === 'opposition' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                        }`}
                         data-testid="badge-supporter-status"
                       >
                         {details.supporterStatus === 'confirmed-supporter' ? 'Confirmed Supporter' :
@@ -1220,10 +1330,12 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       </RadioGroup>
                     ) : (
                       <Badge
-                        variant={
-                          details.volunteerLikeliness === 'confirmed-volunteer' || details.volunteerLikeliness === 'likely-to-volunteer' ? 'default' :
-                          details.volunteerLikeliness === 'will-not-volunteer' ? 'destructive' : 'secondary'
-                        }
+                        className={`text-sm px-3 py-1 ${
+                          details.volunteerLikeliness === 'confirmed-volunteer' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                          details.volunteerLikeliness === 'likely-to-volunteer' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                          details.volunteerLikeliness === 'will-not-volunteer' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                        }`}
                         data-testid="badge-volunteer-likeliness"
                       >
                         {details.volunteerLikeliness === 'confirmed-volunteer' ? 'Confirmed Volunteer' :
@@ -1350,7 +1462,10 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 {/* Public Contact Information */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Public Contact Information</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      Public Contact Information
+                      <Lock className="w-4 h-4 text-yellow-500" />
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground">Contact information from public voter records and databases</p>
                   </CardHeader>
                   <CardContent className="space-y-4">

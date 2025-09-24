@@ -28,9 +28,9 @@ export default function Landing() {
               className="w-full h-full object-cover rounded-full"
             />
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome to AnnaVerse</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome to The Annaverse App</CardTitle>
           <CardDescription className="text-base font-medium">
-            Where grassroots organizing meets community power!
+            Where volunteers can identify Orlando voters who support Representative Dr. Anna V Eskamani for Mayor of Orlando.
           </CardDescription>
           <CardDescription className="text-sm">
             Log in to help us reach voters through personal relationships.
@@ -59,7 +59,7 @@ export default function Landing() {
           </Button>
           
           <p className="text-xs text-center text-muted-foreground">
-            Powered by the people!
+            Powered by the Annaverse!
           </p>
         </CardContent>
       </Card>

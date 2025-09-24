@@ -6,6 +6,7 @@ import {
   contactEmails,
   auditLogs,
   systemSettings,
+  userNetworks,
   type User,
   type UpsertUser,
   type Contact,
@@ -19,6 +20,9 @@ import {
   type InsertContactEmail,
   type AuditLog,
   type InsertAuditLog,
+  type UserNetwork,
+  type InsertUserNetwork,
+  type UpdateUserNetwork,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, ilike, or, count } from "drizzle-orm";
@@ -38,6 +42,7 @@ export interface IStorage {
   createContact(contact: InsertContact): Promise<Contact>;
   updateContact(id: string, updates: UpdateContact, userId: string): Promise<Contact>;
   batchInsertContacts(records: any[], userId: string): Promise<void>;
+  clearAllContacts(): Promise<void>;
   
   // Contact details
   getContactAliases(contactId: string): Promise<ContactAlias[]>;
@@ -66,11 +71,20 @@ export interface IStorage {
   updateUserRole(userId: string, role: string): Promise<User>;
   updateUserStatus(userId: string, isActive: boolean): Promise<User>;
   getSystemStats(): Promise<any>;
+  getLeaderboardStats(): Promise<any>;
   bulkRevertUserChanges(userId: string, revertedBy: string): Promise<void>;
   
   // System settings
   getSetting(key: string): Promise<any>;
   setSetting(key: string, value: any, userId: string): Promise<void>;
+
+  // User Networks (My Network feature)
+  getUserNetworks(userId: string): Promise<(UserNetwork & { contact: Contact })[]>;
+  getUserNetwork(userId: string, contactId: string): Promise<UserNetwork | undefined>;
+  addToUserNetwork(network: InsertUserNetwork): Promise<UserNetwork>;
+  updateUserNetwork(networkId: string, updates: UpdateUserNetwork): Promise<UserNetwork>;
+  removeFromUserNetwork(networkId: string): Promise<void>;
+  getNetworkById(networkId: string): Promise<UserNetwork | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -108,6 +122,18 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async clearAllContacts(): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Delete all related data first (foreign key constraints)
+      await tx.delete(auditLogs);
+      await tx.delete(contactAliases);
+      await tx.delete(contactPhones);
+      await tx.delete(contactEmails);
+      // Finally delete all contacts
+      await tx.delete(contacts);
+    });
   }
 
   // Contact operations
@@ -556,15 +582,59 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async bulkRevertUserChanges(userId: string, revertedBy: string): Promise<void> {
-    // Get all changes by this user
-    const userLogs = await db.select().from(auditLogs)
-      .where(eq(auditLogs.userId, userId))
-      .orderBy(desc(auditLogs.createdAt));
+  async getLeaderboardStats(): Promise<any> {
+    try {
+      // Test database connection and schema
+      let totalActiveVoters = -1;
+      let contactsSample = [];
+      try {
+        // Log a sample of contacts to check schema and voterStatus field
+        contactsSample = await db.select().from(contacts).limit(5);
+        console.log('Sample contacts:', contactsSample);
+        if (contactsSample.length > 0) {
+          console.log('Sample voterStatus values:', contactsSample.map(c => c.voterStatus));
+        }
+      } catch (err) {
+        console.error('Error fetching sample contacts:', err);
+      }
 
-    // Process each log for reverting (simplified - real implementation would be more complex)
-    for (const log of userLogs) {
-      await this.revertAuditLog(log.id, revertedBy);
+      try {
+        // Try the working query again
+        const [activeVoters] = await db
+          .select({ count: count() })
+          .from(contacts)
+          .where(eq(contacts.voterStatus, 'ACT'));
+        totalActiveVoters = activeVoters.count;
+        console.log('Active voters count:', totalActiveVoters);
+      } catch (err) {
+        console.error('Active voters query failed:', err);
+        if (err && err.stack) console.error('Error stack:', err.stack);
+        totalActiveVoters = -1;
+      }
+
+      return {
+        totalActiveVoters,
+        contactsWithNewInfo: 0,
+        confirmedSupporters: 0,
+        confirmedVolunteers: 0,
+        phoneNumberPercentage: 0,
+        emailAddressPercentage: 0,
+        topContributors: [],
+        risingStars: []
+      };
+    } catch (error) {
+      console.error('Leaderboard stats error:', error);
+      if (error && error.stack) console.error('Error stack:', error.stack);
+      return {
+        totalActiveVoters: -1,
+        contactsWithNewInfo: 0,
+        confirmedSupporters: 0,
+        confirmedVolunteers: 0,
+        phoneNumberPercentage: 0,
+        emailAddressPercentage: 0,
+        topContributors: [],
+        risingStars: []
+      };
     }
   }
 
@@ -581,6 +651,69 @@ export class DatabaseStorage implements IStorage {
         target: systemSettings.key,
         set: { value, updatedAt: new Date(), updatedBy: userId }
       });
+  }
+
+  // User Networks (My Network feature) implementation
+  async getUserNetworks(userId: string): Promise<(UserNetwork & { contact: Contact })[]> {
+    const networks = await db
+      .select({
+        id: userNetworks.id,
+        userId: userNetworks.userId,
+        contactId: userNetworks.contactId,
+        notes: userNetworks.notes,
+        createdAt: userNetworks.createdAt,
+        updatedAt: userNetworks.updatedAt,
+        contact: contacts
+      })
+      .from(userNetworks)
+      .innerJoin(contacts, eq(userNetworks.contactId, contacts.id))
+      .where(eq(userNetworks.userId, userId))
+      .orderBy(desc(userNetworks.createdAt));
+
+    return networks;
+  }
+
+  async getUserNetwork(userId: string, contactId: string): Promise<UserNetwork | undefined> {
+    const [network] = await db
+      .select()
+      .from(userNetworks)
+      .where(and(eq(userNetworks.userId, userId), eq(userNetworks.contactId, contactId)));
+
+    return network;
+  }
+
+  async addToUserNetwork(network: InsertUserNetwork): Promise<UserNetwork> {
+    const [newNetwork] = await db
+      .insert(userNetworks)
+      .values(network)
+      .returning();
+
+    return newNetwork;
+  }
+
+  async updateUserNetwork(networkId: string, updates: UpdateUserNetwork): Promise<UserNetwork> {
+    const [updatedNetwork] = await db
+      .update(userNetworks)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(userNetworks.id, networkId))
+      .returning();
+
+    return updatedNetwork;
+  }
+
+  async removeFromUserNetwork(networkId: string): Promise<void> {
+    await db
+      .delete(userNetworks)
+      .where(eq(userNetworks.id, networkId));
+  }
+
+  async getNetworkById(networkId: string): Promise<UserNetwork | undefined> {
+    const [network] = await db
+      .select()
+      .from(userNetworks)
+      .where(eq(userNetworks.id, networkId));
+
+    return network;
   }
 }
 

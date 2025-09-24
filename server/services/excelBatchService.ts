@@ -84,9 +84,51 @@ export class ExcelBatchService {
     const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    
+
     // Get range to calculate total rows without loading all data
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
+
+    // 🔍 DEBUG: Log column names for district field troubleshooting
+    const headers: string[] = [];
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+      const cell = worksheet[cellAddress];
+      if (cell && cell.v) {
+        headers.push(String(cell.v));
+      }
+    }
+
+    console.log('🔍 DEBUGGING DISTRICT FIELDS:');
+    console.log('📊 Total columns found:', headers.length);
+    console.log('📋 All column names:', headers);
+    console.log('🏛️ District-related columns:', headers.filter(h => h.toLowerCase().includes('district') || h.toLowerCase().includes('precinct')));
+    console.log('🎯 Specific district columns check:');
+    console.log('   ✓ House_District:', headers.includes('House_District') ? 'FOUND' : 'MISSING');
+    console.log('   ✓ Senate_District:', headers.includes('Senate_District') ? 'FOUND' : 'MISSING');
+    console.log('   ✓ Commission_District:', headers.includes('Commission_District') ? 'FOUND' : 'MISSING');
+    console.log('   ✓ School_Board_District:', headers.includes('School_Board_District') ? 'FOUND' : 'MISSING');
+    console.log('='.repeat(80));
+
+    // Save column info to file for debugging
+    try {
+      const fs = await import('fs');
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        totalColumns: headers.length,
+        allColumns: headers,
+        districtColumns: headers.filter(h => h.toLowerCase().includes('district') || h.toLowerCase().includes('precinct')),
+        specificChecks: {
+          House_District: headers.includes('House_District'),
+          Senate_District: headers.includes('Senate_District'),
+          Commission_District: headers.includes('Commission_District'),
+          School_Board_District: headers.includes('School_Board_District')
+        }
+      };
+      fs.writeFileSync('./debug-columns.json', JSON.stringify(debugInfo, null, 2));
+      console.log('📝 Column debug info saved to debug-columns.json');
+    } catch (error) {
+      console.error('Failed to save debug info:', error);
+    }
     const totalRows = range.e.r; // End row number
     
     console.log(`Starting batch import of ~${totalRows} voter records`);
@@ -414,6 +456,22 @@ export class ExcelBatchService {
         voterStatus: row.Voter_Status ? String(row.Voter_Status).trim() : null,
         district: row.Congressional_District ? String(row.Congressional_District).trim() : null,
         precinct: row.Precinct ? String(row.Precinct).trim() : null,
+        houseDistrict: (() => {
+          console.log(`🏛️ House District raw value for ${row.First_Name} ${row.Last_Name}:`, typeof row.House_District, JSON.stringify(row.House_District));
+          return row.House_District ? String(row.House_District).trim() : null;
+        })(),
+        senateDistrict: (() => {
+          console.log(`🏛️ Senate District raw value for ${row.First_Name} ${row.Last_Name}:`, typeof row.Senate_District, JSON.stringify(row.Senate_District));
+          return row.Senate_District ? String(row.Senate_District).trim() : null;
+        })(),
+        commissionDistrict: (() => {
+          console.log(`🏛️ Commission District raw value for ${row.First_Name} ${row.Last_Name}:`, typeof row.Commission_District, JSON.stringify(row.Commission_District));
+          return row.Commission_District ? String(row.Commission_District).trim() : null;
+        })(),
+        schoolBoardDistrict: (() => {
+          console.log(`🏛️ School Board District raw value for ${row.First_Name} ${row.Last_Name}:`, typeof row.School_Board_District, JSON.stringify(row.School_Board_District));
+          return row.School_Board_District ? String(row.School_Board_District).trim() : null;
+        })(),
         supporterStatus: 'unknown',
         notes: null,
       };
@@ -422,6 +480,15 @@ export class ExcelBatchService {
       console.error(`Error normalizing voter row ${rowNumber}:`, error);
       return null;
     }
+  }
+
+  private getFieldValue(row: VoterExcelRow, fieldNames: string[]): string | null {
+    for (const fieldName of fieldNames) {
+      if (row[fieldName] !== undefined && row[fieldName] !== null && row[fieldName] !== '') {
+        return String(row[fieldName]).trim();
+      }
+    }
+    return null;
   }
 
   private async findExistingVoterContact(hashedVoterId: string): Promise<any> {

@@ -1,6 +1,6 @@
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, Trophy } from "lucide-react";
 import annaVerseIcon from "@assets/AnnaVerse_1758230016506.png";
 
 interface SidebarProps {
@@ -44,8 +44,8 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           <li>
-            <a 
-              href="#" 
+            <a
+              href="/"
               className="flex items-center space-x-3 px-3 py-2 rounded-md bg-primary text-primary-foreground"
               data-testid="link-search"
             >
@@ -53,7 +53,31 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
               <span>Search Contacts</span>
             </a>
           </li>
-          
+
+          {(user.role === 'admin' || user.role === 'editor') && (
+            <li>
+              <a
+                href="/network"
+                className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                data-testid="link-network"
+              >
+                <Heart className="w-5 h-5" />
+                <span>My Network</span>
+              </a>
+            </li>
+          )}
+
+          <li>
+            <a
+              href="/leaderboard"
+              className="flex items-center space-x-3 px-3 py-2 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              data-testid="link-leaderboard"
+            >
+              <Trophy className="w-5 h-5" />
+              <span>Leaderboard</span>
+            </a>
+          </li>
+
           {user.role === 'admin' && (
             <li className="pt-4 border-t border-border">
               <button
