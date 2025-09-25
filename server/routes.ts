@@ -605,23 +605,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/revert/:logId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+  // Database export endpoint
+  app.get('/api/admin/export', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
     try {
-      await storage.revertAuditLog(req.params.logId, req.currentUser.id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error reverting change:", error);
-      res.status(500).json({ message: "Failed to revert change" });
-    }
-  });
+      console.log(`Database export initiated by admin: ${req.currentUser.email} (${req.currentUser.id})`);
 
-  app.post('/api/admin/bulk-revert/:userId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
-    try {
-      await storage.bulkRevertUserChanges(req.params.userId, req.currentUser.id);
-      res.status(204).send();
+      // Get all contacts with their related data
+      const contacts = await storage.getAllContactsForExport();
+
+      if (!contacts || contacts.length === 0) {
+        return res.status(404).json({ message: "No contacts found to export" });
+      }
+
+      // Use the Excel service to create a workbook
+      const workbook = await excelService.createExportWorkbook(contacts);
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+      const filename = `voter-vault-export-${timestamp}.xlsx`;
+
+      // Set headers for file download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-cache');
+
+      // Write workbook to response
+      await workbook.xlsx.write(res);
+      res.end();
+
+      console.log(`✅ Database export completed by admin: ${req.currentUser.email} - ${contacts.length} contacts exported`);
+
     } catch (error) {
-      console.error("Error bulk reverting changes:", error);
-      res.status(500).json({ message: "Failed to bulk revert changes" });
+      console.error("Error exporting database:", error);
+      res.status(500).json({
+        message: "Failed to export database",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

@@ -272,6 +272,64 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
     }
   };
 
+  // Database export mutation
+  const exportDatabaseMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/admin/export', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Export failed');
+      }
+
+      // Get the blob data
+      const blob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Get filename from response headers or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'voter-vault-export.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Export Complete",
+        description: "Database exported successfully. The file has been downloaded.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to export database",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDatabaseExport = () => {
+    exportDatabaseMutation.mutate();
+  };
+
   // Cleanup SSE connection on unmount
   useEffect(() => {
     return () => {
@@ -306,6 +364,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
             <Button 
               variant="outline" 
               size="sm"
+              onClick={handleDatabaseExport}
               data-testid="button-export-data"
             >
               <i className="fas fa-download mr-2"></i>Export Data

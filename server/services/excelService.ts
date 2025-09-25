@@ -489,6 +489,167 @@ class ExcelService {
       console.error('Error storing related voter data:', error);
     }
   }
+
+  async createExportWorkbook(contacts: any[]): Promise<any> {
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+
+    // Create main contacts sheet
+    const contactsSheet = workbook.addWorksheet('Contacts');
+
+    // Define column headers
+    contactsSheet.columns = [
+      { header: 'System ID', key: 'systemId', width: 15 },
+      { header: 'First Name', key: 'firstName', width: 20 },
+      { header: 'Middle Name', key: 'middleName', width: 15 },
+      { header: 'Last Name', key: 'lastName', width: 20 },
+      { header: 'Full Name', key: 'fullName', width: 30 },
+      { header: 'Suffix', key: 'suffix', width: 10 },
+      { header: 'Birth Date', key: 'birthDate', width: 12 },
+      { header: 'Age', key: 'age', width: 8 },
+      { header: 'Gender', key: 'gender', width: 10 },
+      { header: 'Party', key: 'party', width: 15 },
+      { header: 'Address', key: 'address', width: 40 },
+      { header: 'City', key: 'city', width: 20 },
+      { header: 'State', key: 'state', width: 10 },
+      { header: 'ZIP Code', key: 'zipCode', width: 12 },
+      { header: 'County', key: 'county', width: 20 },
+      { header: 'Precinct', key: 'precinct', width: 15 },
+      { header: 'District', key: 'district', width: 15 },
+      { header: 'Supporter Status', key: 'supporterStatus', width: 20 },
+      { header: 'Vote History', key: 'voteHistory', width: 30 },
+      { header: 'Registration Date', key: 'registrationDate', width: 15 },
+      { header: 'Last Voted Date', key: 'lastVotedDate', width: 15 },
+      { header: 'Primary Phone', key: 'primaryPhone', width: 15 },
+      { header: 'Primary Email', key: 'primaryEmail', width: 30 },
+      { header: 'All Phones', key: 'allPhones', width: 40 },
+      { header: 'All Emails', key: 'allEmails', width: 50 },
+      { header: 'Aliases', key: 'aliases', width: 30 },
+      { header: 'Notes', key: 'notes', width: 50 },
+      { header: 'Created At', key: 'createdAt', width: 20 },
+      { header: 'Updated At', key: 'updatedAt', width: 20 }
+    ];
+
+    // Add data rows
+    contacts.forEach(contact => {
+      const primaryPhone = contact.phones?.find((p: any) => p.isPrimary)?.phoneNumber ||
+                          contact.phones?.[0]?.phoneNumber || '';
+      const primaryEmail = contact.emails?.find((e: any) => e.isPrimary)?.email ||
+                          contact.emails?.[0]?.email || '';
+
+      const allPhones = contact.phones?.map((p: any) => `${p.phoneNumber} (${p.phoneType})`).join(', ') || '';
+      const allEmails = contact.emails?.map((e: any) => `${e.email} (${e.emailType})`).join(', ') || '';
+      const aliases = contact.aliases?.map((a: any) => a.aliasName).join(', ') || '';
+
+      contactsSheet.addRow({
+        systemId: contact.systemId,
+        firstName: contact.firstName,
+        middleName: contact.middleName,
+        lastName: contact.lastName,
+        fullName: contact.fullName,
+        suffix: contact.suffix,
+        birthDate: contact.birthDate ? new Date(contact.birthDate) : null,
+        age: contact.age,
+        gender: contact.gender,
+        party: contact.party,
+        address: contact.address,
+        city: contact.city,
+        state: contact.state,
+        zipCode: contact.zipCode,
+        county: contact.county,
+        precinct: contact.precinct,
+        district: contact.district,
+        supporterStatus: contact.supporterStatus,
+        voteHistory: contact.voteHistory,
+        registrationDate: contact.registrationDate ? new Date(contact.registrationDate) : null,
+        lastVotedDate: contact.lastVotedDate ? new Date(contact.lastVotedDate) : null,
+        primaryPhone: primaryPhone,
+        primaryEmail: primaryEmail,
+        allPhones: allPhones,
+        allEmails: allEmails,
+        aliases: aliases,
+        notes: contact.notes,
+        createdAt: contact.createdAt ? new Date(contact.createdAt) : null,
+        updatedAt: contact.updatedAt ? new Date(contact.updatedAt) : null
+      });
+    });
+
+    // Style the header row
+    const headerRow = contactsSheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6E6FA' }
+    };
+
+    // Create separate sheets for detailed phone and email data
+    if (contacts.some(c => c.phones?.length > 0)) {
+      const phonesSheet = workbook.addWorksheet('Phone Numbers');
+      phonesSheet.columns = [
+        { header: 'Contact System ID', key: 'contactSystemId', width: 15 },
+        { header: 'Contact Name', key: 'contactName', width: 30 },
+        { header: 'Phone Number', key: 'phoneNumber', width: 15 },
+        { header: 'Phone Type', key: 'phoneType', width: 12 },
+        { header: 'Is Primary', key: 'isPrimary', width: 10 }
+      ];
+
+      contacts.forEach(contact => {
+        contact.phones?.forEach((phone: any) => {
+          phonesSheet.addRow({
+            contactSystemId: contact.systemId,
+            contactName: contact.fullName,
+            phoneNumber: phone.phoneNumber,
+            phoneType: phone.phoneType,
+            isPrimary: phone.isPrimary ? 'Yes' : 'No'
+          });
+        });
+      });
+
+      // Style header
+      const phoneHeaderRow = phonesSheet.getRow(1);
+      phoneHeaderRow.font = { bold: true };
+      phoneHeaderRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE6F7FF' }
+      };
+    }
+
+    if (contacts.some(c => c.emails?.length > 0)) {
+      const emailsSheet = workbook.addWorksheet('Email Addresses');
+      emailsSheet.columns = [
+        { header: 'Contact System ID', key: 'contactSystemId', width: 15 },
+        { header: 'Contact Name', key: 'contactName', width: 30 },
+        { header: 'Email Address', key: 'email', width: 35 },
+        { header: 'Email Type', key: 'emailType', width: 12 },
+        { header: 'Is Primary', key: 'isPrimary', width: 10 }
+      ];
+
+      contacts.forEach(contact => {
+        contact.emails?.forEach((email: any) => {
+          emailsSheet.addRow({
+            contactSystemId: contact.systemId,
+            contactName: contact.fullName,
+            email: email.email,
+            emailType: email.emailType,
+            isPrimary: email.isPrimary ? 'Yes' : 'No'
+          });
+        });
+      });
+
+      // Style header
+      const emailHeaderRow = emailsSheet.getRow(1);
+      emailHeaderRow.font = { bold: true };
+      emailHeaderRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF0FFF0' }
+      };
+    }
+
+    return workbook;
+  }
 }
 
 export const excelService = new ExcelService();

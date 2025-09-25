@@ -43,7 +43,8 @@ export interface IStorage {
   updateContact(id: string, updates: UpdateContact, userId: string): Promise<Contact>;
   batchInsertContacts(records: any[], userId: string): Promise<void>;
   clearAllContacts(): Promise<void>;
-  
+  getAllContactsForExport(): Promise<any[]>;
+
   // Contact details
   getContactAliases(contactId: string): Promise<ContactAlias[]>;
   addContactAlias(alias: InsertContactAlias): Promise<ContactAlias>;
@@ -134,6 +135,122 @@ export class DatabaseStorage implements IStorage {
       // Finally delete all contacts
       await tx.delete(contacts);
     });
+  }
+
+  async getAllContactsForExport(): Promise<any[]> {
+    // Get all contacts with their related data for export
+    const query = db
+      .select({
+        // Contact fields
+        id: contacts.id,
+        systemId: contacts.systemId,
+        firstName: contacts.firstName,
+        middleName: contacts.middleName,
+        lastName: contacts.lastName,
+        fullName: contacts.fullName,
+        suffix: contacts.suffix,
+        birthDate: contacts.birthDate,
+        age: contacts.age,
+        gender: contacts.gender,
+        party: contacts.party,
+        address: contacts.address,
+        city: contacts.city,
+        state: contacts.state,
+        zipCode: contacts.zipCode,
+        county: contacts.county,
+        precinct: contacts.precinct,
+        district: contacts.district,
+        supporterStatus: contacts.supporterStatus,
+        voteHistory: contacts.voteHistory,
+        registrationDate: contacts.registrationDate,
+        lastVotedDate: contacts.lastVotedDate,
+        notes: contacts.notes,
+        createdAt: contacts.createdAt,
+        updatedAt: contacts.updatedAt,
+      })
+      .from(contacts)
+      .orderBy(contacts.lastName, contacts.firstName);
+
+    const contactRecords = await query;
+
+    // Get related data for all contacts
+    const contactIds = contactRecords.map(c => c.id);
+
+    if (contactIds.length === 0) {
+      return [];
+    }
+
+    // Get phones for all contacts
+    const phonesQuery = db
+      .select({
+        contactId: contactPhones.contactId,
+        phoneNumber: contactPhones.phoneNumber,
+        phoneType: contactPhones.phoneType,
+        isPrimary: contactPhones.isPrimary,
+      })
+      .from(contactPhones)
+      .where(sql`${contactPhones.contactId} IN (${sql.join(contactIds.map(id => sql`${id}`), sql`, `)})`)
+      .orderBy(contactPhones.isPrimary);
+
+    // Get emails for all contacts
+    const emailsQuery = db
+      .select({
+        contactId: contactEmails.contactId,
+        email: contactEmails.email,
+        emailType: contactEmails.emailType,
+        isPrimary: contactEmails.isPrimary,
+      })
+      .from(contactEmails)
+      .where(sql`${contactEmails.contactId} IN (${sql.join(contactIds.map(id => sql`${id}`), sql`, `)})`)
+      .orderBy(contactEmails.isPrimary);
+
+    // Get aliases for all contacts
+    const aliasesQuery = db
+      .select({
+        contactId: contactAliases.contactId,
+        aliasName: contactAliases.aliasName,
+      })
+      .from(contactAliases)
+      .where(sql`${contactAliases.contactId} IN (${sql.join(contactIds.map(id => sql`${id}`), sql`, `)})`);
+
+    const [phonesData, emailsData, aliasesData] = await Promise.all([
+      phonesQuery,
+      emailsQuery,
+      aliasesQuery
+    ]);
+
+    // Group related data by contact ID
+    const phonesByContact = new Map<string, typeof phonesData>();
+    phonesData.forEach(phone => {
+      if (!phonesByContact.has(phone.contactId)) {
+        phonesByContact.set(phone.contactId, []);
+      }
+      phonesByContact.get(phone.contactId)!.push(phone);
+    });
+
+    const emailsByContact = new Map<string, typeof emailsData>();
+    emailsData.forEach(email => {
+      if (!emailsByContact.has(email.contactId)) {
+        emailsByContact.set(email.contactId, []);
+      }
+      emailsByContact.get(email.contactId)!.push(email);
+    });
+
+    const aliasesByContact = new Map<string, typeof aliasesData>();
+    aliasesData.forEach(alias => {
+      if (!aliasesByContact.has(alias.contactId)) {
+        aliasesByContact.set(alias.contactId, []);
+      }
+      aliasesByContact.get(alias.contactId)!.push(alias);
+    });
+
+    // Combine all data
+    return contactRecords.map(contact => ({
+      ...contact,
+      phones: phonesByContact.get(contact.id) || [],
+      emails: emailsByContact.get(contact.id) || [],
+      aliases: aliasesByContact.get(contact.id) || [],
+    }));
   }
 
   // Contact operations
