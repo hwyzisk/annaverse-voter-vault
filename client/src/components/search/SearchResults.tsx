@@ -171,8 +171,8 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
   const total = data?.total || 0;
 
   return (
-    <Card>
-      <div className="px-6 py-4 border-b border-border">
+    <Card className="flex flex-col h-full">
+      <div className="px-6 py-4 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Search Results</h3>
           <span className="text-sm text-muted-foreground" data-testid="text-results-count">
@@ -180,9 +180,9 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
           </span>
         </div>
       </div>
-      
+
       {contacts.length === 0 ? (
-        <CardContent className="p-6 text-center text-muted-foreground">
+        <CardContent className="p-6 text-center text-muted-foreground flex-1 flex flex-col items-center justify-center">
           <Search className="w-16 h-16 mb-4 opacity-50" />
           <p>No contacts found matching your search criteria.</p>
           <p className="text-sm mt-2">Try adjusting your search terms or filters.</p>
@@ -191,9 +191,9 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
         <>
           {/* Desktop Table View */}
           {!isMobile ? (
-            <div className="overflow-x-auto">
+            <div className="flex-1 overflow-auto">
               <table className="w-full">
-                <thead className="bg-muted/50">
+                <thead className="bg-muted/50 sticky top-0 z-10">
                   <tr>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Name</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Age</th>
@@ -279,8 +279,9 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
             </div>
           ) : (
             /* Mobile List View */
-            <div className="divide-y divide-border">
-              {contacts.map((contact: Contact) => (
+            <div className="flex-1 overflow-auto">
+              <div className="divide-y divide-border">
+                {contacts.map((contact: Contact) => (
                 <div key={contact.id} className="p-4" data-testid={`card-contact-${contact.id}`}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
@@ -351,12 +352,13 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                     </Button>
                   </div>
                 </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
-          
+
           {/* Pagination */}
-          <div className="px-6 py-4 border-t border-border">
+          <div className="px-6 py-4 border-t border-border flex-shrink-0">
             <div className={`${isMobile ? 'flex flex-col space-y-3' : 'flex items-center justify-between'}`}>
               <p className="text-sm text-muted-foreground">
                 Showing <span className="font-medium">{((currentPage - 1) * limit) + 1}-{Math.min(currentPage * limit, total)}</span> of <span className="font-medium">{total}</span> results

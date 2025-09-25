@@ -44,6 +44,11 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUserData, setNewUserData] = useState({ email: "", firstName: "", lastName: "", role: "viewer" });
+
+  // Database wipe functionality
+  const [showWipeDialog, setShowWipeDialog] = useState(false);
+  const [wipeConfirmation, setWipeConfirmation] = useState("");
+  const [isWiping, setIsWiping] = useState(false);
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -181,6 +186,45 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
       console.error('SSE connection error:', error);
       eventSource.close();
     };
+  };
+
+  // Database wipe mutation
+  const wipeDatabaseMutation = useMutation({
+    mutationFn: async ({ confirmation }: { confirmation: string }) => {
+      return await apiRequest('POST', '/api/admin/database/wipe', { confirmation });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(); // Invalidate all queries since data is wiped
+      setShowWipeDialog(false);
+      setWipeConfirmation("");
+      setIsWiping(false);
+      toast({
+        title: "Database wiped successfully",
+        description: "All contact data has been permanently deleted. You can now import new data."
+      });
+    },
+    onError: (error: any) => {
+      setIsWiping(false);
+      toast({
+        title: "Database wipe failed",
+        description: error.message || "Failed to wipe database. Check your credentials.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDatabaseWipe = () => {
+    if (wipeConfirmation !== "DELETE") {
+      toast({
+        title: "Invalid confirmation",
+        description: "You must type 'DELETE' exactly to confirm.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsWiping(true);
+    wipeDatabaseMutation.mutate({ confirmation: wipeConfirmation });
   };
 
   const handleExcelUpload = async () => {
@@ -934,10 +978,75 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                     <i className="fas fa-tools mr-2"></i>
                     System Maintenance Mode
                   </Button>
+                  <Button
+                    variant="destructive"
+                    className="w-full justify-start bg-red-600 hover:bg-red-700"
+                    onClick={() => {
+                      console.log('Wipe database button clicked');
+                      setShowWipeDialog(true);
+                    }}
+                    data-testid="button-wipe-database"
+                  >
+                    <Trash className="w-4 h-4 mr-2" />
+                    ⚠️ WIPE ENTIRE DATABASE
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Database Wipe Confirmation Dialog */}
+          <AlertDialog open={showWipeDialog} onOpenChange={setShowWipeDialog}>
+            <AlertDialogContent className="max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-destructive">⚠️ DANGER: Wipe Entire Database</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-4">
+                  <p className="text-sm text-red-600 font-medium">
+                    This will permanently DELETE ALL contact data. This action CANNOT be undone!
+                  </p>
+                  <div>
+                    <Label htmlFor="wipe-confirmation" className="text-sm font-medium">
+                      Type "DELETE" in all caps to confirm:
+                    </Label>
+                    <Input
+                      id="wipe-confirmation"
+                      type="text"
+                      placeholder="DELETE"
+                      value={wipeConfirmation}
+                      onChange={(e) => setWipeConfirmation(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  onClick={() => {
+                    setWipeConfirmation("");
+                  }}
+                >
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDatabaseWipe}
+                  disabled={isWiping || wipeConfirmation !== "DELETE"}
+                  className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                >
+                  {isWiping ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      Wiping...
+                    </>
+                  ) : (
+                    <>
+                      <Trash className="w-4 h-4 mr-2" />
+                      WIPE DATABASE
+                    </>
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
@@ -1492,6 +1601,18 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                       >
                         <SettingsIcon className="w-4 h-4 mr-3" />
                         Maintenance Mode
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="w-full h-11 justify-start bg-red-600 hover:bg-red-700"
+                        onClick={() => {
+                          console.log('Wipe database button clicked');
+                          setShowWipeDialog(true);
+                        }}
+                        data-testid="button-wipe-database"
+                      >
+                        <Trash className="w-4 h-4 mr-3" />
+                        ⚠️ WIPE ENTIRE DATABASE
                       </Button>
                     </div>
                   </div>

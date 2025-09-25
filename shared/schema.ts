@@ -87,7 +87,20 @@ export const contacts = pgTable("contacts", {
   updatedAt: timestamp("updated_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
   lastUpdatedBy: varchar("last_updated_by").references(() => users.id),
-});
+}, (table) => [
+  // Critical performance indexes for Excel import
+  index("idx_contacts_system_id").on(table.systemId),
+  index("idx_contacts_first_name").on(table.firstName),
+  index("idx_contacts_last_name").on(table.lastName),
+  index("idx_contacts_full_name").on(table.fullName),
+  index("idx_contacts_voter_id_redacted").on(table.voterIdRedacted),
+  index("idx_contacts_created_at").on(table.createdAt),
+  index("idx_contacts_last_updated_by").on(table.lastUpdatedBy),
+  index("idx_contacts_is_active").on(table.isActive),
+  // Composite indexes for common search patterns
+  index("idx_contacts_name_search").on(table.firstName, table.lastName),
+  index("idx_contacts_location").on(table.city, table.state, table.zipCode),
+]);
 
 // Contact aliases/nicknames
 export const contactAliases = pgTable("contact_aliases", {
@@ -95,7 +108,11 @@ export const contactAliases = pgTable("contact_aliases", {
   contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: 'cascade' }),
   alias: text("alias").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => [
+  // Indexes for alias searches and foreign key performance
+  index("idx_contact_aliases_contact_id").on(table.contactId),
+  index("idx_contact_aliases_alias").on(table.alias),
+]);
 
 // Contact phone numbers
 export const contactPhones = pgTable("contact_phones", {
@@ -108,7 +125,12 @@ export const contactPhones = pgTable("contact_phones", {
   isManuallyAdded: boolean("is_manually_added").notNull().default(false), // True for volunteer-researched data
   createdAt: timestamp("created_at").defaultNow(),
   createdBy: varchar("created_by").references(() => users.id),
-});
+}, (table) => [
+  // Indexes for phone lookups and bulk operations
+  index("idx_contact_phones_contact_id").on(table.contactId),
+  index("idx_contact_phones_number").on(table.phoneNumber),
+  index("idx_contact_phones_is_baseline").on(table.isBaselineData),
+]);
 
 // Contact email addresses
 export const contactEmails = pgTable("contact_emails", {

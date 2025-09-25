@@ -100,9 +100,9 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
   };
 
   return (
-    <div className="p-6">
+    <div className="flex flex-col h-full">
       {/* Search Bar and Filters */}
-      <Card className="mb-6">
+      <Card className="mb-6 flex-shrink-0">
         <CardContent className="p-6 space-y-4">
           {/* Name Search Inputs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -259,11 +259,13 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
       </Card>
 
       {/* Search Results */}
-      <SearchResults 
-        nameSearch={nameSearch}
-        filters={{ ...advancedFilters, quickFilters: activeQuickFilters }}
-        onContactSelect={onContactSelect}
-      />
+      <div className="flex-1 min-h-0">
+        <SearchResults
+          nameSearch={nameSearch}
+          filters={{ ...advancedFilters, quickFilters: activeQuickFilters }}
+          onContactSelect={onContactSelect}
+        />
+      </div>
 
       {/* Mobile Filters Sheet */}
       <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
