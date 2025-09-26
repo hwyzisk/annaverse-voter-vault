@@ -1113,6 +1113,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Impact/Stats endpoint
+  app.get('/api/impact/stats', isAuthenticated, async (req, res) => {
+    try {
+      const impactData = await storage.getImpactStats();
+      res.json(impactData);
+    } catch (error) {
+      console.error('Error fetching impact stats:', error);
+      res.status(500).json({ message: 'Failed to fetch impact stats' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

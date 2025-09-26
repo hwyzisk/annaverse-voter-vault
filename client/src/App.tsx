@@ -13,7 +13,7 @@ import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Network from "@/pages/network";
-import Leaderboard from "@/pages/leaderboard";
+import OurImpact from "@/pages/OurImpact";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -43,7 +43,7 @@ function Router() {
         <>
           <Route path="/" component={HomeFull} />
           <Route path="/network" component={Network} />
-          <Route path="/leaderboard" component={Leaderboard} />
+          <Route path="/our-impact" component={OurImpact} />
           <Route path="/admin" component={Admin} />
         </>
       )}

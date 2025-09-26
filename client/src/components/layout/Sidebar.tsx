@@ -1,6 +1,6 @@
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, Trophy } from "lucide-react";
+import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, TrendingUp } from "lucide-react";
 import annaVerseIcon from "@assets/AnnaVerse_1758230016506.png";
 
 interface SidebarProps {
@@ -80,12 +80,12 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
 
           <li>
             <a
-              href="/leaderboard"
-              className={getLinkClassName('/leaderboard')}
-              data-testid="link-leaderboard"
+              href="/our-impact"
+              className={getLinkClassName('/our-impact')}
+              data-testid="link-our-impact"
             >
-              <Trophy className="w-5 h-5" />
-              <span>Leaderboard</span>
+              <TrendingUp className="w-5 h-5" />
+              <span>Our Impact</span>
             </a>
           </li>
 

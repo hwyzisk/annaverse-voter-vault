@@ -80,6 +80,9 @@ export interface IStorage {
   updateUserNetwork(networkId: string, updates: UpdateUserNetwork): Promise<UserNetwork>;
   removeFromUserNetwork(networkId: string): Promise<void>;
   getNetworkById(networkId: string): Promise<UserNetwork | undefined>;
+
+  // Impact stats
+  getImpactStats(): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -447,10 +450,9 @@ export class DatabaseStorage implements IStorage {
       const contactsToInsert = records.map(record => record.contact);
       const insertedContacts = await tx.insert(contacts).values(contactsToInsert).returning();
       
-      // Batch insert phones and aliases using the returned contact IDs
+      // Batch insert phones using the returned contact IDs
       const phonesToInsert: InsertContactPhone[] = [];
-      const aliasesToInsert: InsertContactAlias[] = [];
-      
+
       insertedContacts.forEach((contact, index) => {
         const record = records[index];
         
@@ -461,39 +463,13 @@ export class DatabaseStorage implements IStorage {
             contactId: contact.id
           });
         }
-        
-        // Add baseline alias if exists
-        if (record.alias) {
-          aliasesToInsert.push({
-            ...record.alias,
-            contactId: contact.id
-          });
-        }
       });
       
-      // Batch insert phones and aliases
+      // Batch insert phones
       if (phonesToInsert.length > 0) {
         await tx.insert(contactPhones).values(phonesToInsert);
       }
-      
-      if (aliasesToInsert.length > 0) {
-        await tx.insert(contactAliases).values(aliasesToInsert);
-      }
     });
-  }
-
-  // Contact aliases
-  async getContactAliases(contactId: string): Promise<ContactAlias[]> {
-    return await db.select().from(contactAliases).where(eq(contactAliases.contactId, contactId));
-  }
-
-  async addContactAlias(alias: InsertContactAlias): Promise<ContactAlias> {
-    const [created] = await db.insert(contactAliases).values(alias).returning();
-    return created;
-  }
-
-  async removeContactAlias(id: string): Promise<void> {
-    await db.delete(contactAliases).where(eq(contactAliases.id, id));
   }
 
   // Contact phones
@@ -830,6 +806,154 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userNetworks.id, networkId));
 
     return network;
+  }
+
+  async getImpactStats(): Promise<any> {
+    try {
+      // Get total active voters
+      const [totalActiveVotersResult] = await db
+        .select({ count: count() })
+        .from(contacts)
+        .where(eq(contacts.voterStatus, 'ACT'));
+
+      const totalActiveVoters = totalActiveVotersResult.count;
+
+      // Get confirmed supporters data
+      const [confirmedSupportersResult] = await db
+        .select({ count: count() })
+        .from(contacts)
+        .where(eq(contacts.supporterStatus, 'confirmed-supporter'));
+
+      // Get supporters by party
+      const supportersByParty = await db
+        .select({
+          party: contacts.party,
+          count: count()
+        })
+        .from(contacts)
+        .where(eq(contacts.supporterStatus, 'confirmed-supporter'))
+        .groupBy(contacts.party);
+
+      const totalConfirmedSupporters = confirmedSupportersResult.count;
+      const supportersByPartyWithPercentage = supportersByParty.map(item => ({
+        party: item.party || 'Unknown',
+        count: item.count,
+        percentage: totalConfirmedSupporters > 0 ? (item.count / totalConfirmedSupporters) * 100 : 0
+      }));
+
+      // Get supporters by age (calculated from birth date)
+      const supportersByAge = await db
+        .select({
+          ageRange: sql<string>`
+            CASE 
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 30 THEN '18-29'
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 40 THEN '30-39'
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 50 THEN '40-49'
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 65 THEN '50-64'
+              ELSE '65+'
+            END
+          `,
+          count: count()
+        })
+        .from(contacts)
+        .where(and(
+          eq(contacts.supporterStatus, 'confirmed-supporter'),
+          sql`${contacts.dateOfBirth} IS NOT NULL`
+        ))
+        .groupBy(sql`
+          CASE 
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 30 THEN '18-29'
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 40 THEN '30-39'
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 50 THEN '40-49'
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 65 THEN '50-64'
+            ELSE '65+'
+          END
+        `);
+
+      const supportersByAgeWithPercentage = supportersByAge.map(item => ({
+        ageRange: item.ageRange,
+        count: item.count,
+        percentage: totalConfirmedSupporters > 0 ? (item.count / totalConfirmedSupporters) * 100 : 0
+      }));
+
+      // Get confirmed volunteers count
+      const [confirmedVolunteersResult] = await db
+        .select({ count: count() })
+        .from(contacts)
+        .where(eq(contacts.volunteerLikeliness, 'confirmed-volunteer'));
+
+      // Get phone numbers and emails added BY VOLUNTEERS (not baseline data)
+      const [phoneNumbersResult] = await db
+        .select({ count: count() })
+        .from(contactPhones)
+        .where(eq(contactPhones.isManuallyAdded, true));
+
+      const [emailAddressesResult] = await db
+        .select({ count: count() })
+        .from(contactEmails)
+        .where(eq(contactEmails.isManuallyAdded, true));
+
+      // Get active volunteers (users with recent activity)
+      const [activeVolunteersResult] = await db
+        .select({ count: count() })
+        .from(users)
+        .where(eq(users.isActive, true));
+
+      // Sample goals - these could be configured in system settings
+      const goals = [
+        {
+          name: 'Active Voters',
+          current: totalActiveVoters,
+          target: 50000
+        },
+        {
+          name: 'Confirmed Supporters',
+          current: totalConfirmedSupporters,
+          target: 10000
+        },
+        {
+          name: 'Phone Numbers',
+          current: phoneNumbersResult.count,
+          target: 25000
+        },
+        {
+          name: 'Email Addresses',
+          current: emailAddressesResult.count,
+          target: 20000
+        }
+      ];
+
+      return {
+        totalActiveVoters,
+        goals,
+        confirmedSupporters: {
+          total: totalConfirmedSupporters,
+          byParty: supportersByPartyWithPercentage,
+          byAge: supportersByAgeWithPercentage
+        },
+        confirmedVolunteers: confirmedVolunteersResult.count,
+        phoneNumbersAdded: phoneNumbersResult.count,
+        emailAddressesAdded: emailAddressesResult.count,
+        activeVolunteers: activeVolunteersResult.count
+      };
+    } catch (error) {
+      console.error('Error fetching impact stats:', error);
+
+      // Return default/empty data structure in case of error
+      return {
+        totalActiveVoters: 0,
+        goals: [],
+        confirmedSupporters: {
+          total: 0,
+          byParty: [],
+          byAge: []
+        },
+        confirmedVolunteers: 0,
+        phoneNumbersAdded: 0,
+        emailAddressesAdded: 0,
+        activeVolunteers: 0
+      };
+    }
   }
 }
 

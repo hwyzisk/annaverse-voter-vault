@@ -314,8 +314,9 @@ export default function Network() {
         {selectedContact && (
           <ProfileModal
             contact={selectedContact}
-            open={!!selectedContact}
-            onOpenChange={() => setSelectedContact(null)}
+            user={user}
+            isOpen={!!selectedContact}
+            onClose={() => setSelectedContact(null)}
           />
         )}
 

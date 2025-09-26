@@ -1013,13 +1013,10 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                     This will permanently DELETE ALL contact data. This action CANNOT be undone!
                   </p>
                   <div>
-                    <Label htmlFor="wipe-confirmation" className="text-sm font-medium">
-                      Type "DELETE" in all caps to confirm:
-                    </Label>
                     <Input
                       id="wipe-confirmation"
                       type="text"
-                      placeholder="DELETE"
+                      placeholder="Confirmation required"
                       value={wipeConfirmation}
                       onChange={(e) => setWipeConfirmation(e.target.value)}
                       className="mt-1"

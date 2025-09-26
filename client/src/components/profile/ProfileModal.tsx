@@ -103,10 +103,10 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
 
   // Check network status when modal opens or contact changes
   useEffect(() => {
-    if (isOpen && contact.id && (user.role === 'admin' || user.role === 'editor')) {
+    if (isOpen && contact.id && user && (user.role === 'admin' || user.role === 'editor')) {
       checkNetworkStatus();
     }
-  }, [isOpen, contact.id, user.role]);
+  }, [isOpen, contact.id, user?.role]);
 
   const checkNetworkStatus = async () => {
     try {
@@ -374,7 +374,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     }
   };
 
-  const canEdit = user.role === 'admin' || user.role === 'editor';
+  const canEdit = user && (user.role === 'admin' || user.role === 'editor');
 
   if (isLoading) {
     if (isMobile) {
@@ -1135,7 +1135,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               {new Date(log.createdAt).toLocaleDateString()}
                             </p>
                           </div>
-                          {user.role === 'admin' && (
+                          {user && user.role === 'admin' && (
                             <Button
                               variant="ghost" 
                               size="default"
@@ -1881,7 +1881,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                 {new Date(log.createdAt).toLocaleDateString()}
                               </p>
                             </div>
-                            {user.role === 'admin' && (
+                            {user && user.role === 'admin' && (
                               <Button
                                 variant="ghost" 
                                 size="sm"
