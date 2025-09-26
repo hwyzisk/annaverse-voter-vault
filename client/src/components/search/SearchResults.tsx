@@ -260,9 +260,6 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                                 <Heart className="w-4 h-4 text-red-500 fill-current" />
                               )}
                             </p>
-                            <p className="text-sm text-muted-foreground">
-                              ID: {contact.systemId}
-                            </p>
                           </div>
                         </div>
                       </td>
@@ -323,9 +320,6 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                             <Heart className="w-4 h-4 text-red-500 fill-current flex-shrink-0" />
                           )}
                         </h4>
-                        <p className="text-sm text-muted-foreground">
-                          ID: {contact.systemId}
-                        </p>
                       </div>
                       
                       {/* Status and Party Badges */}

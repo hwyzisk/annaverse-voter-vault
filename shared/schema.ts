@@ -268,7 +268,6 @@ export const insertContactSchema = createInsertSchema(contacts);
 export const selectContactSchema = createSelectSchema(contacts);
 export const updateContactSchema = insertContactSchema.partial().omit({ id: true, createdAt: true });
 
-export const insertContactAliasSchema = createInsertSchema(contactAliases);
 export const insertContactPhoneSchema = createInsertSchema(contactPhones);
 export const insertContactEmailSchema = createInsertSchema(contactEmails);
 export const insertAuditLogSchema = createInsertSchema(auditLogs);
@@ -317,8 +316,6 @@ export type Contact = typeof contacts.$inferSelect;
 export type InsertContact = typeof contacts.$inferInsert;
 export type UpdateContact = z.infer<typeof updateContactSchema>;
 
-export type ContactAlias = typeof contactAliases.$inferSelect;
-export type InsertContactAlias = typeof contactAliases.$inferInsert;
 
 export type ContactPhone = typeof contactPhones.$inferSelect;
 export type InsertContactPhone = typeof contactPhones.$inferInsert;
