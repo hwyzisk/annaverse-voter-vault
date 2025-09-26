@@ -72,7 +72,6 @@ export const contacts = pgTable("contacts", {
   commissionDistrict: text("commission_district"),
   schoolBoardDistrict: text("school_board_district"),
   // Voter-specific fields
-  voterIdRedacted: varchar("voter_id_redacted"), // For privacy compliance
   registrationDate: date("registration_date"),
   party: varchar("party"),
   voterStatus: varchar("voter_status"),

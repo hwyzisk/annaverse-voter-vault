@@ -45,9 +45,6 @@ export interface IStorage {
   clearAllContacts(): Promise<void>;
   
   // Contact details
-  getContactAliases(contactId: string): Promise<ContactAlias[]>;
-  addContactAlias(alias: InsertContactAlias): Promise<ContactAlias>;
-  removeContactAlias(id: string): Promise<void>;
   
   getContactPhones(contactId: string): Promise<ContactPhone[]>;
   addContactPhone(phone: InsertContactPhone): Promise<ContactPhone>;
@@ -72,6 +69,7 @@ export interface IStorage {
   updateUserStatus(userId: string, isActive: boolean): Promise<User>;
   getSystemStats(): Promise<any>;
   getLeaderboardStats(): Promise<any>;
+  getImpactStats(): Promise<any>;
   bulkRevertUserChanges(userId: string, revertedBy: string): Promise<void>;
   
   // System settings
@@ -257,7 +255,6 @@ export class DatabaseStorage implements IStorage {
             senateDistrict: contacts.senateDistrict,
             commissionDistrict: contacts.commissionDistrict,
             schoolBoardDistrict: contacts.schoolBoardDistrict,
-            voterIdRedacted: contacts.voterIdRedacted,
             registrationDate: contacts.registrationDate,
             party: contacts.party,
             voterStatus: contacts.voterStatus,
@@ -300,7 +297,6 @@ export class DatabaseStorage implements IStorage {
             senateDistrict: contacts.senateDistrict,
             commissionDistrict: contacts.commissionDistrict,
             schoolBoardDistrict: contacts.schoolBoardDistrict,
-            voterIdRedacted: contacts.voterIdRedacted,
             registrationDate: contacts.registrationDate,
             party: contacts.party,
             voterStatus: contacts.voterStatus,
@@ -738,6 +734,126 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userNetworks.id, networkId));
 
     return network;
+  }
+
+  async getImpactStats(): Promise<any> {
+    // Get total active voters
+    const [activeVotersResult] = await db
+      .select({ count: count() })
+      .from(contacts)
+      .where(eq(contacts.isActive, true));
+
+    // Get confirmed supporters total and breakdowns
+    const [supportersResult] = await db
+      .select({ count: count() })
+      .from(contacts)
+      .where(and(
+        eq(contacts.isActive, true),
+        eq(contacts.supporterStatus, 'confirmed-supporter')
+      ));
+
+    // Get supporters by party
+    const supportersByParty = await db
+      .select({
+        party: contacts.party,
+        count: count(),
+      })
+      .from(contacts)
+      .where(and(
+        eq(contacts.isActive, true),
+        eq(contacts.supporterStatus, 'confirmed-supporter')
+      ))
+      .groupBy(contacts.party);
+
+    // Calculate age ranges and get supporters by age
+    const supportersByAge = await db
+      .select({
+        ageRange: sql<string>`
+          CASE
+            WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) BETWEEN 18 AND 29 THEN '18-29'
+            WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) BETWEEN 30 AND 49 THEN '30-49'
+            WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+            WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) >= 65 THEN '65+'
+            ELSE 'Unknown'
+          END
+        `,
+        count: count(),
+      })
+      .from(contacts)
+      .where(and(
+        eq(contacts.isActive, true),
+        eq(contacts.supporterStatus, 'confirmed-supporter')
+      ))
+      .groupBy(sql`
+        CASE
+          WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) BETWEEN 18 AND 29 THEN '18-29'
+          WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) BETWEEN 30 AND 49 THEN '30-49'
+          WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) BETWEEN 50 AND 64 THEN '50-64'
+          WHEN EXTRACT(YEAR FROM AGE(date_of_birth)) >= 65 THEN '65+'
+          ELSE 'Unknown'
+        END
+      `);
+
+    // Get confirmed volunteers
+    const [volunteersResult] = await db
+      .select({ count: count() })
+      .from(contacts)
+      .where(and(
+        eq(contacts.isActive, true),
+        eq(contacts.volunteerLikeliness, 'confirmed-volunteer')
+      ));
+
+    // Get volunteer-added phone numbers
+    const [phoneNumbersResult] = await db
+      .select({ count: count() })
+      .from(contactPhones)
+      .where(eq(contactPhones.isManuallyAdded, true));
+
+    // Get volunteer-added email addresses
+    const [emailAddressesResult] = await db
+      .select({ count: count() })
+      .from(contactEmails)
+      .where(eq(contactEmails.isManuallyAdded, true));
+
+    // Get active volunteers (users with at least 1 contact in network)
+    const [activeVolunteersResult] = await db
+      .select({ count: count(sql`DISTINCT ${userNetworks.userId}`) })
+      .from(userNetworks);
+
+    // Calculate percentages for breakdowns
+    const totalSupporters = supportersResult.count;
+    const supportersByPartyWithPercentage = supportersByParty.map(party => ({
+      party: party.party || 'Unknown',
+      count: party.count,
+      percentage: totalSupporters > 0 ? (party.count / totalSupporters) * 100 : 0,
+    }));
+
+    const supportersByAgeWithPercentage = supportersByAge.map(age => ({
+      ageRange: age.ageRange,
+      count: age.count,
+      percentage: totalSupporters > 0 ? (age.count / totalSupporters) * 100 : 0,
+    }));
+
+    // Static goals for now (could be made configurable later)
+    const goals = [
+      { name: 'Supporters', current: totalSupporters, target: 1000 },
+      { name: 'Volunteers', current: volunteersResult.count, target: 500 },
+      { name: 'Phone Numbers', current: phoneNumbersResult.count, target: 2000 },
+    ];
+
+    return {
+      totalActiveVoters: activeVotersResult.count,
+      goals,
+      confirmedSupporters: {
+        total: totalSupporters,
+        byParty: supportersByPartyWithPercentage,
+        byAge: supportersByAgeWithPercentage,
+      },
+      confirmedVolunteers: volunteersResult.count,
+      phoneNumbersAdded: phoneNumbersResult.count,
+      emailAddressesAdded: emailAddressesResult.count,
+      activeVolunteers: activeVolunteersResult.count,
+    };
   }
 }
 
