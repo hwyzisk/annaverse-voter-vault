@@ -123,7 +123,6 @@ export class DatabaseStorage implements IStorage {
     await db.transaction(async (tx) => {
       // Delete all related data first (foreign key constraints)
       await tx.delete(auditLogs);
-      await tx.delete(contactAliases);
       await tx.delete(contactPhones);
       await tx.delete(contactEmails);
       // Finally delete all contacts
