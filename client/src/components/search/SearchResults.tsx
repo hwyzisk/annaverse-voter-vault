@@ -171,7 +171,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
   const total = data?.total || 0;
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="search-results-container min-h-[60vh]">
       <div className="px-6 py-4 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Search Results</h3>
@@ -191,7 +191,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
         <>
           {/* Desktop Table View */}
           {!isMobile ? (
-            <div className="flex-1 overflow-auto">
+            <div className="search-results-scrollable">
               <table className="w-full">
                 <thead className="bg-muted/50 sticky top-0 z-10">
                   <tr>
@@ -279,7 +279,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
             </div>
           ) : (
             /* Mobile List View */
-            <div className="flex-1 overflow-auto">
+            <div className="search-results-scrollable">
               <div className="divide-y divide-border">
                 {contacts.map((contact: Contact) => (
                 <div key={contact.id} className="p-4" data-testid={`card-contact-${contact.id}`}>

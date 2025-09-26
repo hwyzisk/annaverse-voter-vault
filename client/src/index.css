@@ -110,4 +110,18 @@
     padding: 1px 2px;
     border-radius: 2px;
   }
+
+  /* Ensure proper scrolling in production builds */
+  .search-results-container {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .search-results-scrollable {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+  }
 }

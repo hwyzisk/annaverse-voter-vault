@@ -50,7 +50,7 @@ export default function HomeFull() {
           showMobileMenu={isMobile}
         />
 
-        <div className="flex-1 overflow-hidden px-4 py-6">
+        <div className="flex-1 overflow-hidden px-4 py-6 min-h-0">
           <SearchInterface onContactSelect={setSelectedContact} />
         </div>
       </main>

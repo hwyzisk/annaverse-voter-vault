@@ -100,7 +100,7 @@ export default function SearchInterface({ onContactSelect }: SearchInterfaceProp
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-[calc(100vh-8rem)]">
       {/* Search Bar and Filters */}
       <Card className="mb-6 flex-shrink-0">
         <CardContent className="p-6 space-y-4">

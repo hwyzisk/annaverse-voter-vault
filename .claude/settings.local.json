@@ -11,7 +11,9 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_Fa4Ri6TyAUuL@ep-broad-darkness-ads8szkj-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx tsx scripts/debug-districts.ts)",
       "Bash(npx tsx:*)",
       "Bash(xargs ls:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(pkill:*)",
+      "Bash(set PORT=3001)"
     ],
     "deny": [],
     "ask": []
