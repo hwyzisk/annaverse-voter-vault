@@ -376,7 +376,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
       {/* Content */}
       <div className="flex-1 overflow-auto">
         <div className="p-6">
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
             {/* System Stats Cards */}
             <Card>
               <CardContent className="p-6">
@@ -420,22 +420,6 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                     <p className="text-sm font-medium text-muted-foreground">Edits Today</p>
                     <p className="text-2xl font-bold" data-testid="stat-edits-today">
                       {statsLoading ? '-' : stats?.editsToday || '0'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <i className="fas fa-chart-line text-purple-600"></i>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-muted-foreground">Data Quality</p>
-                    <p className="text-2xl font-bold text-green-600" data-testid="stat-data-quality">
-                      {statsLoading ? '-' : `${stats?.dataQuality || '0'}%`}
                     </p>
                   </div>
                 </div>
@@ -721,22 +705,23 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                       <p className="mt-2 text-muted-foreground">Loading audit logs...</p>
                     </div>
                   ) : auditLogs && auditLogs.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Timestamp</TableHead>
-                            <TableHead>User</TableHead>
-                            <TableHead>Action</TableHead>
-                            <TableHead>Table</TableHead>
-                            <TableHead>Field</TableHead>
-                            <TableHead>Old Value</TableHead>
-                            <TableHead>New Value</TableHead>
-                            <TableHead>Contact</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {auditLogs.map((log) => (
+                    <div className="max-h-96 overflow-auto">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-background border-b z-10">
+                            <TableRow>
+                              <TableHead>Timestamp</TableHead>
+                              <TableHead>User</TableHead>
+                              <TableHead>Action</TableHead>
+                              <TableHead>Table</TableHead>
+                              <TableHead>Field</TableHead>
+                              <TableHead>Old Value</TableHead>
+                              <TableHead>New Value</TableHead>
+                              <TableHead>Contact</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {auditLogs.map((log) => (
                             <TableRow key={log.id}>
                               <TableCell data-testid={`audit-timestamp-${log.id}`}>
                                 <div className="text-sm">
@@ -823,8 +808,9 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                               </TableCell>
                             </TableRow>
                           ))}
-                        </TableBody>
-                      </Table>
+                          </TableBody>
+                        </Table>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
@@ -838,43 +824,6 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
             </TabsContent>
 
             <TabsContent value="settings" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Field Permissions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {[
-                      { field: 'Phone Numbers', key: 'phones' },
-                      { field: 'Email Addresses', key: 'emails' },
-                      { field: 'Notes', key: 'notes' },
-                      { field: 'Aliases', key: 'aliases' },
-                      { field: 'Supporter Status', key: 'supporter_status' },
-                      { field: 'District Info', key: 'districts' },
-                    ].map((permission) => (
-                      <div key={permission.key} className="flex items-center justify-between">
-                        <Label htmlFor={permission.key} className="text-sm font-medium">
-                          {permission.field}
-                        </Label>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            id={permission.key}
-                            className="sr-only peer"
-                            defaultChecked={true}
-                            data-testid={`toggle-${permission.key}`}
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <Button className="w-full mt-6" data-testid="button-save-permissions">
-                    Save Permissions
-                  </Button>
-                </CardContent>
-              </Card>
-
               <Card>
                 <CardHeader>
                   <CardTitle>System Settings</CardTitle>
@@ -1494,39 +1443,6 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-6 space-y-6">
-                  {/* Field Permissions */}
-                  <div>
-                    <h4 className="text-base font-medium mb-4">Field Permissions</h4>
-                    <div className="space-y-4">
-                      {[
-                        { field: 'Phone Numbers', key: 'phones' },
-                        { field: 'Email Addresses', key: 'emails' },
-                        { field: 'Notes', key: 'notes' },
-                        { field: 'Aliases', key: 'aliases' },
-                        { field: 'Supporter Status', key: 'supporter_status' },
-                        { field: 'District Info', key: 'districts' },
-                      ].map((permission) => (
-                        <div key={permission.key} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                          <Label className="text-base font-medium">
-                            {permission.field}
-                          </Label>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              className="sr-only peer"
-                              defaultChecked={true}
-                              data-testid={`toggle-${permission.key}`}
-                            />
-                            <div className="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/25 rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-7 after:w-7 after:transition-all peer-checked:bg-primary"></div>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    <Button className="w-full mt-4 h-11" data-testid="button-save-permissions">
-                      Save Permissions
-                    </Button>
-                  </div>
-
                   {/* System Settings */}
                   <div>
                     <h4 className="text-base font-medium mb-4">System Settings</h4>

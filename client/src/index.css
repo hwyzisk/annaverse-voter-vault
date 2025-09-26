@@ -117,13 +117,11 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    border: 3px solid red !important; /* DEBUG: This should be visible if CSS is loading */
   }
 
   .search-results-scrollable {
     flex: 1;
     overflow: auto;
     min-height: 0;
-    background-color: #f0f8ff !important; /* DEBUG: Light blue background */
   }
 }

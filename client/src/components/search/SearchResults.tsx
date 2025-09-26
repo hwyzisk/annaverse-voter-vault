@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Phone, Mail, AlertTriangle, Search, Eye, Heart } from "lucide-react";
+import { AlertTriangle, Search, Eye, Heart } from "lucide-react";
 import { getPartyColor, formatParty } from "@/lib/utils";
 import type { Contact } from "@shared/schema";
 
@@ -137,6 +137,32 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
     }
   };
 
+  const getVolunteerStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed-volunteer':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
+      case 'likely-to-volunteer':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+      case 'will-not-volunteer':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+  };
+
+  const formatVolunteerStatus = (status: string) => {
+    switch (status) {
+      case 'confirmed-volunteer':
+        return 'Confirmed Volunteer';
+      case 'likely-to-volunteer':
+        return 'Likely to Volunteer';
+      case 'will-not-volunteer':
+        return 'Will Not Volunteer';
+      default:
+        return 'Unknown';
+    }
+  };
+
   const totalPages = Math.ceil((data?.total || 0) / limit);
 
   if (isLoading) {
@@ -177,8 +203,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
         height: '100%',
         overflow: 'hidden',
         display: 'flex',
-        flexDirection: 'column',
-        border: '3px solid red' /* DEBUG */
+        flexDirection: 'column'
       }}
     >
       <div className="px-6 py-4 border-b border-border flex-shrink-0">
@@ -204,20 +229,18 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
               style={{
                 flex: '1',
                 overflow: 'auto',
-                minHeight: '0',
-                backgroundColor: '#f0f8ff' /* DEBUG */
+                minHeight: '0'
               }}
             >
               <table className="w-full">
-                <thead className="bg-muted/50 sticky top-0 z-10">
+                <thead className="bg-background border-b sticky top-0 z-10">
                   <tr>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Name</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Age</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Location</th>
                     <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Party</th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Contact</th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Last Updated</th>
-                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Status</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Supporter</th>
+                    <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Volunteer</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -258,34 +281,19 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          {/* Phone Icon - 3-color system */}
-                          {(contact as any).manualPhoneCount > 0 ? (
-                            <Phone className="w-3 h-3 text-green-600" data-testid={`icon-phone-volunteer-${contact.id}`} />
-                          ) : (contact as any).baselinePhoneCount > 0 ? (
-                            <Phone className="w-3 h-3 text-black dark:text-white" data-testid={`icon-phone-public-${contact.id}`} />
-                          ) : (
-                            <Phone className="w-3 h-3 text-gray-300" data-testid={`icon-phone-none-${contact.id}`} />
-                          )}
-                          {/* Email Icon - 3-color system */}
-                          {(contact as any).manualEmailCount > 0 ? (
-                            <Mail className="w-3 h-3 text-green-600" data-testid={`icon-email-volunteer-${contact.id}`} />
-                          ) : (contact as any).baselineEmailCount > 0 ? (
-                            <Mail className="w-3 h-3 text-black dark:text-white" data-testid={`icon-email-public-${contact.id}`} />
-                          ) : (
-                            <Mail className="w-3 h-3 text-gray-300" data-testid={`icon-email-none-${contact.id}`} />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
-                        {contact.updatedAt ? new Date(contact.updatedAt).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge 
+                        <Badge
                           className={getSupporterStatusColor(contact.supporterStatus || 'unknown')}
                           data-testid={`badge-status-${contact.id}`}
                         >
                           {formatSupporterStatus(contact.supporterStatus || 'unknown')}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge
+                          className={getVolunteerStatusColor(contact.volunteerLikeliness || 'unknown')}
+                          data-testid={`badge-volunteer-${contact.id}`}
+                        >
+                          {formatVolunteerStatus(contact.volunteerLikeliness || 'unknown')}
                         </Badge>
                       </td>
                     </tr>
@@ -299,8 +307,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
               style={{
                 flex: '1',
                 overflow: 'auto',
-                minHeight: '0',
-                backgroundColor: '#f0f8ff' /* DEBUG */
+                minHeight: '0'
               }}
             >
               <div className="divide-y divide-border">
@@ -323,18 +330,24 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                       
                       {/* Status and Party Badges */}
                       <div className="flex flex-wrap gap-2 mb-3">
-                        <Badge 
+                        <Badge
                           className={getSupporterStatusColor(contact.supporterStatus || 'unknown')}
                           data-testid={`badge-status-${contact.id}`}
                         >
                           {formatSupporterStatus(contact.supporterStatus || 'unknown')}
+                        </Badge>
+                        <Badge
+                          className={getVolunteerStatusColor(contact.volunteerLikeliness || 'unknown')}
+                          data-testid={`badge-volunteer-${contact.id}`}
+                        >
+                          {formatVolunteerStatus(contact.volunteerLikeliness || 'unknown')}
                         </Badge>
                         <Badge variant="outline" className={`${getPartyColor(contact.party)} border-current`}>
                           {formatParty(contact.party)}
                         </Badge>
                       </div>
                       
-                      {/* Location, Age, Contact Icons */}
+                      {/* Location and Age */}
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span data-testid={`text-age-${contact.id}`}>
                           Age: {calculateAge(contact.dateOfBirth) || 'N/A'}
@@ -342,24 +355,6 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                         <span>
                           {contact.city || 'N/A'}, {contact.zipCode || 'N/A'}
                         </span>
-                        <div className="flex items-center gap-1">
-                          {/* Phone Icon - 3-color system */}
-                          {(contact as any).manualPhoneCount > 0 ? (
-                            <Phone className="w-3 h-3 text-green-600" data-testid={`icon-phone-volunteer-${contact.id}`} />
-                          ) : (contact as any).baselinePhoneCount > 0 ? (
-                            <Phone className="w-3 h-3 text-black dark:text-white" data-testid={`icon-phone-public-${contact.id}`} />
-                          ) : (
-                            <Phone className="w-3 h-3 text-gray-300" data-testid={`icon-phone-none-${contact.id}`} />
-                          )}
-                          {/* Email Icon - 3-color system */}
-                          {(contact as any).manualEmailCount > 0 ? (
-                            <Mail className="w-3 h-3 text-green-600" data-testid={`icon-email-volunteer-${contact.id}`} />
-                          ) : (contact as any).baselineEmailCount > 0 ? (
-                            <Mail className="w-3 h-3 text-black dark:text-white" data-testid={`icon-email-public-${contact.id}`} />
-                          ) : (
-                            <Mail className="w-3 h-3 text-gray-300" data-testid={`icon-email-none-${contact.id}`} />
-                          )}
-                        </div>
                       </div>
                     </div>
                     

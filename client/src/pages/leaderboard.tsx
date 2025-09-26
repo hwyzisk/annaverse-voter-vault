@@ -133,7 +133,7 @@ export default function Leaderboard() {
                       <Users className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{stats?.totalActiveVoters || 0}</div>
+                      <div className="text-2xl font-bold">{stats?.totalActiveVoters?.toLocaleString() || '0'}</div>
                     </CardContent>
                   </Card>
 
@@ -143,7 +143,7 @@ export default function Leaderboard() {
                       <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{stats?.contactsWithNewInfo || 0}</div>
+                      <div className="text-2xl font-bold">{stats?.contactsWithNewInfo?.toLocaleString() || '0'}</div>
                     </CardContent>
                   </Card>
 
@@ -153,7 +153,7 @@ export default function Leaderboard() {
                       <Vote className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{stats?.confirmedSupporters || 0}</div>
+                      <div className="text-2xl font-bold">{stats?.confirmedSupporters?.toLocaleString() || '0'}</div>
                     </CardContent>
                   </Card>
 
@@ -163,7 +163,7 @@ export default function Leaderboard() {
                       <UserCheck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{stats?.confirmedVolunteers || 0}</div>
+                      <div className="text-2xl font-bold">{stats?.confirmedVolunteers?.toLocaleString() || '0'}</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -221,7 +221,7 @@ export default function Leaderboard() {
                               <div className="flex-1">
                                 <p className="font-medium">{contributor.name}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  {contributor.enrichedCount} profiles enriched
+                                  {contributor.enrichedCount.toLocaleString()} profiles enriched
                                 </p>
                               </div>
                               <Badge variant="secondary">#{index + 1}</Badge>
@@ -256,7 +256,7 @@ export default function Leaderboard() {
                               <div className="flex-1">
                                 <p className="font-medium">{star.name}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  {star.enrichedCount} profiles enriched this week
+                                  {star.enrichedCount.toLocaleString()} profiles enriched this week
                                 </p>
                               </div>
                               <Badge variant="secondary">#{index + 1}</Badge>
