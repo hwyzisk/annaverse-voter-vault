@@ -171,7 +171,16 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
   const total = data?.total || 0;
 
   return (
-    <Card className="search-results-container min-h-[60vh]">
+    <Card
+      className="min-h-[60vh]"
+      style={{
+        height: '100%',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        border: '3px solid red' /* DEBUG */
+      }}
+    >
       <div className="px-6 py-4 border-b border-border flex-shrink-0">
         <div className="flex items-center justify-between">
           <h3 className="font-medium">Search Results</h3>
@@ -191,7 +200,14 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
         <>
           {/* Desktop Table View */}
           {!isMobile ? (
-            <div className="search-results-scrollable">
+            <div
+              style={{
+                flex: '1',
+                overflow: 'auto',
+                minHeight: '0',
+                backgroundColor: '#f0f8ff' /* DEBUG */
+              }}
+            >
               <table className="w-full">
                 <thead className="bg-muted/50 sticky top-0 z-10">
                   <tr>
@@ -279,7 +295,14 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
             </div>
           ) : (
             /* Mobile List View */
-            <div className="search-results-scrollable">
+            <div
+              style={{
+                flex: '1',
+                overflow: 'auto',
+                minHeight: '0',
+                backgroundColor: '#f0f8ff' /* DEBUG */
+              }}
+            >
               <div className="divide-y divide-border">
                 {contacts.map((contact: Contact) => (
                 <div key={contact.id} className="p-4" data-testid={`card-contact-${contact.id}`}>
