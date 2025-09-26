@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: annaverse_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-annaverse}
+      POSTGRES_USER: ${POSTGRES_USER:-annaverse_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - annaverse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-annaverse_user} -d ${POSTGRES_DB:-annaverse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # AnnaVerse Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: annaverse_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-annaverse_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-annaverse}?sslmode=disable
+      SESSION_SECRET: ${SESSION_SECRET}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      REPLIT_DB_URL: ${REPLIT_DB_URL:-}
+      DOMAIN: ${DOMAIN:-localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - annaverse_network
+    volumes:
+      - app_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: annaverse_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - annaverse_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Redis for session storage (uncomment if needed)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: annaverse_redis
+  #   restart: unless-stopped
+  #   command: redis-server --requirepass ${REDIS_PASSWORD}
+  #   environment:
+  #     REDIS_PASSWORD: ${REDIS_PASSWORD}
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - annaverse_network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  app_uploads:
+    driver: local
+  nginx_cache:
+    driver: local
+  nginx_logs:
+    driver: local
+  # redis_data:
+  #   driver: local
+
+networks:
+  annaverse_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
