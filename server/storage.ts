@@ -197,19 +197,9 @@ export class DatabaseStorage implements IStorage {
       .where(sql`${contactEmails.contactId} IN (${sql.join(contactIds.map(id => sql`${id}`), sql`, `)})`)
       .orderBy(contactEmails.isPrimary);
 
-    // Get aliases for all contacts
-    const aliasesQuery = db
-      .select({
-        contactId: contactAliases.contactId,
-        aliasName: contactAliases.aliasName,
-      })
-      .from(contactAliases)
-      .where(sql`${contactAliases.contactId} IN (${sql.join(contactIds.map(id => sql`${id}`), sql`, `)})`);
-
-    const [phonesData, emailsData, aliasesData] = await Promise.all([
+    const [phonesData, emailsData] = await Promise.all([
       phonesQuery,
-      emailsQuery,
-      aliasesQuery
+      emailsQuery
     ]);
 
     // Group related data by contact ID
@@ -229,20 +219,12 @@ export class DatabaseStorage implements IStorage {
       emailsByContact.get(email.contactId)!.push(email);
     });
 
-    const aliasesByContact = new Map<string, typeof aliasesData>();
-    aliasesData.forEach(alias => {
-      if (!aliasesByContact.has(alias.contactId)) {
-        aliasesByContact.set(alias.contactId, []);
-      }
-      aliasesByContact.get(alias.contactId)!.push(alias);
-    });
 
     // Combine all data
     return contactRecords.map(contact => ({
       ...contact,
       phones: phonesByContact.get(contact.id) || [],
       emails: emailsByContact.get(contact.id) || [],
-      aliases: aliasesByContact.get(contact.id) || [],
     }));
   }
 
