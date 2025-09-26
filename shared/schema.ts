@@ -103,16 +103,6 @@ export const contacts = pgTable("contacts", {
 ]);
 
 // Contact aliases/nicknames
-export const contactAliases = pgTable("contact_aliases", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: 'cascade' }),
-  alias: text("alias").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-}, (table) => [
-  // Indexes for alias searches and foreign key performance
-  index("idx_contact_aliases_contact_id").on(table.contactId),
-  index("idx_contact_aliases_alias").on(table.alias),
-]);
 
 // Contact phone numbers
 export const contactPhones = pgTable("contact_phones", {
@@ -197,19 +187,12 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
     fields: [contacts.lastUpdatedBy],
     references: [users.id],
   }),
-  aliases: many(contactAliases),
   phones: many(contactPhones),
   emails: many(contactEmails),
   auditLogs: many(auditLogs),
   userNetworks: many(userNetworks),
 }));
 
-export const contactAliasesRelations = relations(contactAliases, ({ one }) => ({
-  contact: one(contacts, {
-    fields: [contactAliases.contactId],
-    references: [contacts.id],
-  }),
-}));
 
 export const contactPhonesRelations = relations(contactPhones, ({ one }) => ({
   contact: one(contacts, {
