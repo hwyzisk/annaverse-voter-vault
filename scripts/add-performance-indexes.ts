@@ -53,9 +53,9 @@ const PERFORMANCE_INDEXES: IndexInfo[] = [
     estimatedSpeedup: '5-10x faster full name searches'
   },
   {
-    name: 'idx_contacts_voter_id_redacted',
+    name: 'idx_contacts_voter_id',
     table: 'contacts',
-    columns: ['voter_id_redacted'],
+    columns: ['voter_id'],
     description: 'Accelerates voter ID lookups',
     estimatedSpeedup: '20-50x faster voter ID searches'
   },

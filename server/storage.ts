@@ -1,7 +1,6 @@
 import {
   users,
   contacts,
-  contactAliases,
   contactPhones,
   contactEmails,
   auditLogs,
@@ -12,8 +11,6 @@ import {
   type Contact,
   type InsertContact,
   type UpdateContact,
-  type ContactAlias,
-  type InsertContactAlias,
   type ContactPhone,
   type InsertContactPhone,
   type ContactEmail,
@@ -46,9 +43,6 @@ export interface IStorage {
   getAllContactsForExport(): Promise<any[]>;
 
   // Contact details
-  getContactAliases(contactId: string): Promise<ContactAlias[]>;
-  addContactAlias(alias: InsertContactAlias): Promise<ContactAlias>;
-  removeContactAlias(id: string): Promise<void>;
   
   getContactPhones(contactId: string): Promise<ContactPhone[]>;
   addContactPhone(phone: InsertContactPhone): Promise<ContactPhone>;
@@ -374,7 +368,7 @@ export class DatabaseStorage implements IStorage {
             senateDistrict: contacts.senateDistrict,
             commissionDistrict: contacts.commissionDistrict,
             schoolBoardDistrict: contacts.schoolBoardDistrict,
-            voterIdRedacted: contacts.voterIdRedacted,
+            voterId: contacts.voterId,
             registrationDate: contacts.registrationDate,
             party: contacts.party,
             voterStatus: contacts.voterStatus,
@@ -417,7 +411,7 @@ export class DatabaseStorage implements IStorage {
             senateDistrict: contacts.senateDistrict,
             commissionDistrict: contacts.commissionDistrict,
             schoolBoardDistrict: contacts.schoolBoardDistrict,
-            voterIdRedacted: contacts.voterIdRedacted,
+            voterId: contacts.voterId,
             registrationDate: contacts.registrationDate,
             party: contacts.party,
             voterStatus: contacts.voterStatus,

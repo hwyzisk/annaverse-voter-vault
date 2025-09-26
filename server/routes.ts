@@ -3,12 +3,10 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, setUserSession, clearUserSession } from "./localAuth";
 import { searchService } from "./services/searchService";
-import { excelService } from "./services/excelService";
-import { excelBatchService } from "./services/excelBatchService";
 import { optimizedExcelService } from "./services/optimizedExcelService";
 import { auditService } from "./services/auditService";
 import { AuthService } from "./authService";
-import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactAliasSchema, insertUserNetworkSchema, updateUserNetworkSchema } from "@shared/schema";
+import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertUserNetworkSchema, updateUserNetworkSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 
@@ -300,8 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get related data
-      const [aliases, phones, emails, auditLogs] = await Promise.all([
-        storage.getContactAliases(contact.id),
+      const [phones, emails, auditLogs] = await Promise.all([
         storage.getContactPhones(contact.id),
         storage.getContactEmails(contact.id),
         storage.getAuditLogs(contact.id, undefined, 50)
@@ -313,7 +310,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         ...contact,
-        aliases,
         phones: mappedPhones,
         emails: mappedEmails,
         auditLogs
@@ -447,31 +443,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Contact aliases
-  app.post('/api/contacts/:id/aliases', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
-    try {
-      const aliasData = insertContactAliasSchema.parse({
-        ...req.body,
-        contactId: req.params.id
-      });
-
-      const alias = await storage.addContactAlias(aliasData);
-      res.json(alias);
-    } catch (error) {
-      console.error("Error adding alias:", error);
-      res.status(500).json({ message: "Failed to add alias" });
-    }
-  });
-
-  app.delete('/api/aliases/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req, res) => {
-    try {
-      await storage.removeContactAlias(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error removing alias:", error);
-      res.status(500).json({ message: "Failed to remove alias" });
-    }
-  });
 
   // Admin endpoints
   app.get('/api/admin/users', isAuthenticated, requireRole(['admin']), async (req, res) => {
@@ -618,7 +589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use the Excel service to create a workbook
-      const workbook = await excelService.createExportWorkbook(contacts);
+      const workbook = await optimizedExcelService.createExportWorkbook(contacts);
 
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
@@ -718,9 +689,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
 
-      const result = await excelBatchService.processExcelFileStream(
-        req.file.buffer, 
+      const result = await optimizedExcelService.processExcelFileOptimized(
+        req.file.buffer,
         req.currentUser.id,
+        { dryRun: false, overwriteUserData: false },
         progressCallback
       );
       
@@ -977,7 +949,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Attached Excel batch import started by ${req.currentUser.email}: ${filename} (${buffer.length} bytes)`);
       
       // Process the Excel file using new batch service
-      const result = await excelBatchService.processExcelFileStream(buffer, req.currentUser.id);
+      const result = await optimizedExcelService.processExcelFileOptimized(
+        buffer,
+        req.currentUser.id,
+        { dryRun: false, overwriteUserData: false }
+      );
       
       // Log completion info
       console.log(`Attached Excel batch import completed by ${req.currentUser.email}: ${result.processed} records processed, ${result.errors.length} errors`);

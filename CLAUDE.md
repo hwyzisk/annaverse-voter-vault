@@ -34,8 +34,7 @@ AnnaVerse (formerly VoterVault) is a comprehensive contact management system for
 ├── server/          # Express.js backend
 │   ├── services/    # Business logic services
 │   │   ├── auditService.ts     # Change tracking
-│   │   ├── excelService.ts     # Excel import/export
-│   │   ├── excelBatchService.ts # Bulk operations
+│   │   ├── optimizedExcelService.ts # Excel import/export with high performance
 │   │   └── searchService.ts    # Intelligent contact search
 │   ├── routes.ts    # API route definitions
 │   ├── storage.ts   # Database operations layer
@@ -111,7 +110,7 @@ AnnaVerse (formerly VoterVault) is a comprehensive contact management system for
 
 ### File Upload Handling
 - Excel imports via `multer` middleware
-- File validation and processing in `excelService.ts`
+- File validation and processing in `optimizedExcelService.ts`
 - Temporary file cleanup after processing
 
 ## Environment Configuration

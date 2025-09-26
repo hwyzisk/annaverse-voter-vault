@@ -72,7 +72,7 @@ export const contacts = pgTable("contacts", {
   commissionDistrict: text("commission_district"),
   schoolBoardDistrict: text("school_board_district"),
   // Voter-specific fields
-  voterIdRedacted: varchar("voter_id_redacted"), // For privacy compliance
+  voterId: varchar("voter_id"), // Voter ID
   registrationDate: date("registration_date"),
   party: varchar("party"),
   voterStatus: varchar("voter_status"),
@@ -93,7 +93,7 @@ export const contacts = pgTable("contacts", {
   index("idx_contacts_first_name").on(table.firstName),
   index("idx_contacts_last_name").on(table.lastName),
   index("idx_contacts_full_name").on(table.fullName),
-  index("idx_contacts_voter_id_redacted").on(table.voterIdRedacted),
+  index("idx_contacts_voter_id").on(table.voterId),
   index("idx_contacts_created_at").on(table.createdAt),
   index("idx_contacts_last_updated_by").on(table.lastUpdatedBy),
   index("idx_contacts_is_active").on(table.isActive),

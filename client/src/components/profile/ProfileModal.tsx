@@ -17,7 +17,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { getPartyColor, formatParty } from "@/lib/utils";
 import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History, Lock, Heart, HeartOff } from "lucide-react";
-import type { Contact, User, ContactPhone, ContactEmail, ContactAlias } from "@shared/schema";
+import type { Contact, User, ContactPhone, ContactEmail } from "@shared/schema";
 
 interface ProfileModalProps {
   contact: Contact;
@@ -27,7 +27,6 @@ interface ProfileModalProps {
 }
 
 interface ContactDetails extends Contact {
-  aliases: ContactAlias[];
   phones: ContactPhone[];
   emails: ContactEmail[];
   auditLogs: any[];
@@ -69,7 +68,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   const [notes, setNotes] = useState(contact.notes || "");
   const [supporterStatus, setSupporterStatus] = useState(contact.supporterStatus ?? "unknown");
   const [volunteerLikeliness, setVolunteerLikeliness] = useState(contact.volunteerLikeliness ?? "unknown");
-  const [newAlias, setNewAlias] = useState("");
   const [newPhone, setNewPhone] = useState({ phoneNumber: "", phoneType: "mobile" as const });
   const [newEmail, setNewEmail] = useState({ email: "", emailType: "personal" as const });
   const [editingPhone, setEditingPhone] = useState<{ id: string; phoneNumber: string; phoneType: string } | null>(null);
@@ -316,23 +314,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     },
   });
 
-  const addAliasMutation = useMutation({
-    mutationFn: async (alias: string) => {
-      await apiRequest('POST', `/api/contacts/${contact.id}/aliases`, { alias });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
-      setNewAlias("");
-      toast({ title: "Alias added" });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to add alias",
-        variant: "destructive",
-      });
-    },
-  });
+  // Alias functionality removed
 
   const handleSave = () => {
     const updates: any = {};
@@ -426,7 +408,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
 
   const details = contactDetails || {
     ...contact,
-    aliases: [],
     phones: [],
     emails: [],
     auditLogs: [],
@@ -664,47 +645,10 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     </div>
                   </div>
                   <div>
-                    <Label className="text-sm text-muted-foreground">Aliases/Nicknames</Label>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {details.aliases.map((alias) => (
-                        <Badge key={alias.id} variant="secondary" className="text-sm">
-                          {alias.alias}
-                          {canEdit && (
-                            <button 
-                              onClick={() => {
-                                // Add alias deletion functionality here when backend supports it
-                                console.log('Delete alias:', alias.id);
-                              }}
-                              className="ml-2 text-muted-foreground hover:text-foreground"
-                              data-testid={`button-delete-alias-${alias.id}`}
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          )}
-                        </Badge>
-                      ))}
-                    </div>
-                    {canEdit && (
-                      <div className="flex items-center space-x-2 mt-3">
-                        <Input
-                          placeholder="Add alias..."
-                          value={newAlias}
-                          onChange={(e) => setNewAlias(e.target.value)}
-                          className="flex-1 h-11 text-base"
-                          data-testid="input-new-alias"
-                        />
-                        <Button
-                          size="default"
-                          onClick={() => newAlias && addAliasMutation.mutate(newAlias)}
-                          disabled={!newAlias || addAliasMutation.isPending}
-                          className="h-11 px-4"
-                          data-testid="button-add-alias"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
+                    <Label className="text-sm text-muted-foreground">Voter ID</Label>
+                    <p className="text-base mt-1 font-mono">{details.voterId || 'Not provided'}</p>
                   </div>
+                  {/* Nicknames functionality completely removed */}
                 </AccordionContent>
               </AccordionItem>
 
@@ -1466,40 +1410,11 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                         )}
                       </div>
                     </div>
-                    <div className="col-span-2">
-                      <Label className="text-muted-foreground">Aliases/Nicknames</Label>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {details.aliases.map((alias) => (
-                          <Badge key={alias.id} variant="secondary">
-                            {alias.alias}
-                            {canEdit && (
-                              <button className="ml-1 text-muted-foreground hover:text-foreground">
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </Badge>
-                        ))}
-                      </div>
-                      {canEdit && (
-                        <div className="flex items-center space-x-2 mt-2">
-                          <Input
-                            placeholder="Add alias..."
-                            value={newAlias}
-                            onChange={(e) => setNewAlias(e.target.value)}
-                            className="flex-1"
-                            data-testid="input-new-alias"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => newAlias && addAliasMutation.mutate(newAlias)}
-                            disabled={!newAlias || addAliasMutation.isPending}
-                            data-testid="button-add-alias"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
+                    <div>
+                      <Label className="text-muted-foreground">Voter ID</Label>
+                      <p className="text-sm mt-1 font-mono">{details.voterId || 'Not provided'}</p>
                     </div>
+                    {/* Nicknames functionality completely removed */}
                   </CardContent>
                 </Card>
 

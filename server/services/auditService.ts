@@ -260,7 +260,7 @@ class AuditService {
       newValue: JSON.stringify({
         systemId: contact.systemId,
         fullName: contact.fullName,
-        voterIdRedacted: contact.voterIdRedacted
+        voterId: contact.voterId
       }),
       metadata: {
         timestamp: new Date().toISOString(),
