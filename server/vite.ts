@@ -70,8 +70,7 @@ export async function setupVite(app: Express, server: Server) {
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
-        "..",
+        process.cwd(),
         "client",
         "index.html",
       );
@@ -92,7 +91,9 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // In production, the built files are in the same directory as index.js
+  // which is in the dist folder, so public should be dist/public
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
