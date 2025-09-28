@@ -423,8 +423,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
           </SheetHeader>
           
           {/* Mobile Sticky Header */}
-          <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
-            <div className="flex items-center justify-between">
+          <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pr-12">
+            <div className="flex items-center justify-between pr-2">
               <div className="flex items-center space-x-3">
                 <Button
                   variant="ghost"
@@ -1180,8 +1180,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
         <DialogDescription className="sr-only">Contact information and details for {details.fullName}</DialogDescription>
         <div className="flex flex-col h-full">
           {/* Profile Header */}
-          <div className="border-b border-border pb-4">
-            <div className="flex items-center justify-between">
+          <div className="border-b border-border pb-4 pr-8">
+            <div className="flex items-center justify-between pr-2">
               <div className="flex items-center space-x-4">
                 <Button
                   variant="ghost"

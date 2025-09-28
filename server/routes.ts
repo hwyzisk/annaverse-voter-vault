@@ -504,6 +504,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User approval endpoints
+  app.patch('/api/admin/users/:id/approve', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      const user = await storage.updateUserStatus(req.params.id, 'approved');
+      res.json(user);
+    } catch (error) {
+      console.error("Error approving user:", error);
+      res.status(500).json({ message: "Failed to approve user" });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/reject', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      const user = await storage.updateUserStatus(req.params.id, 'rejected');
+      res.json(user);
+    } catch (error) {
+      console.error("Error rejecting user:", error);
+      res.status(500).json({ message: "Failed to reject user" });
+    }
+  });
+
+  // User export endpoint
+  app.get('/api/admin/users/export', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      console.log(`User export initiated by admin: ${req.currentUser.email} (${req.currentUser.id})`);
+
+      // Get all users
+      const users = await storage.getAllUsers();
+
+      if (!users || users.length === 0) {
+        return res.status(404).json({ message: "No users found to export" });
+      }
+
+      // Use the Excel service to create a workbook for users
+      const workbook = await optimizedExcelService.createUserExportWorkbook(users);
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+      const filename = `annaverse-users-export-${timestamp}.xlsx`;
+
+      // Set headers for file download
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Cache-Control', 'no-cache');
+
+      // Write workbook to response
+      await workbook.xlsx.write(res);
+      res.end();
+
+      console.log(`✅ User export completed by admin: ${req.currentUser.email} - ${users.length} users exported`);
+
+    } catch (error) {
+      console.error("Error exporting users:", error);
+      res.status(500).json({
+        message: "Failed to export users",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   app.get('/api/admin/stats', isAuthenticated, requireRole(['admin']), async (req, res) => {
     try {
       const stats = await storage.getSystemStats();

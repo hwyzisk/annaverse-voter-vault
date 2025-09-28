@@ -16,8 +16,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { apiRequest } from "@/lib/queryClient";
-import { ArrowLeft, Download, Users as UsersIcon, Plus, Edit, Trash2, Check, X, Upload, Database, Save, CheckCircle, Trash, Settings as SettingsIcon } from "lucide-react";
+import { ArrowLeft, Download, Users as UsersIcon, Plus, Edit, Trash2, Check, X, Upload, Database, Save, CheckCircle, Trash, Settings as SettingsIcon, Eye } from "lucide-react";
 import type { User } from "@shared/schema";
+import UserProfileModal from "./UserProfileModal";
 
 interface AdminDashboardProps {
   isOpen: boolean;
@@ -43,6 +44,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
   const eventSourceRef = useRef<EventSource | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [selectedUserProfile, setSelectedUserProfile] = useState<User | null>(null);
   const [newUserData, setNewUserData] = useState({ email: "", firstName: "", lastName: "", role: "viewer" });
 
   // Database wipe functionality
@@ -326,8 +328,66 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
     },
   });
 
+  // User export mutation
+  const exportUsersMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/admin/users/export', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Export failed');
+      }
+
+      // Get the blob data
+      const blob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Get filename from response headers or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'annaverse-users-export.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+    },
+    onSuccess: () => {
+      toast({
+        title: "User Export Complete",
+        description: "User data exported successfully. The file has been downloaded.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "User Export Failed",
+        description: error.message || "Failed to export user data",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDatabaseExport = () => {
     exportDatabaseMutation.mutate();
+  };
+
+  const handleUsersExport = () => {
+    exportUsersMutation.mutate();
   };
 
   // Cleanup SSE connection on unmount
@@ -342,8 +402,8 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
   const content = (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-card border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-card border-b border-border px-6 py-4 pr-12">
+        <div className="flex items-center justify-between pr-2">
           <div className="flex items-center space-x-4">
             {!isFullPage && (
               <Button 
@@ -444,10 +504,22 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                       <UsersIcon className="w-5 h-5" />
                       User Management
                     </CardTitle>
-                    <Button onClick={() => setShowAddUser(true)} data-testid="button-add-user">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add User
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUsersExport}
+                        disabled={exportUsersMutation.isPending}
+                        data-testid="button-export-users"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export Users
+                      </Button>
+                      <Button onClick={() => setShowAddUser(true)} data-testid="button-add-user">
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add User
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -561,6 +633,15 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setSelectedUserProfile(userItem)}
+                                    data-testid={`button-view-profile-${userItem.id}`}
+                                    title="View full profile"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                  </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -1052,6 +1133,14 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* User Profile Modal */}
+          <UserProfileModal
+            user={selectedUserProfile}
+            isOpen={!!selectedUserProfile}
+            onClose={() => setSelectedUserProfile(null)}
+            currentUser={user}
+          />
         </div>
       </div>
     </div>

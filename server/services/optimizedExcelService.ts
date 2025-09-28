@@ -14,6 +14,7 @@
  */
 
 import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 import { storage } from '../storage';
 import { auditService } from './auditService';
 import { nanoid } from 'nanoid';
@@ -899,7 +900,6 @@ export class OptimizedExcelService {
    * Create an Excel workbook for exporting contacts data
    */
   async createExportWorkbook(contacts: any[]): Promise<any> {
-    const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
 
     // Create main contacts sheet
@@ -1055,6 +1055,69 @@ export class OptimizedExcelService {
         fgColor: { argb: 'FFF0FFF0' }
       };
     }
+
+    return workbook;
+  }
+
+  /**
+   * Create user export workbook
+   */
+  async createUserExportWorkbook(users: any[]): Promise<any> {
+    const workbook = new ExcelJS.Workbook();
+
+    // Create main users sheet
+    const usersSheet = workbook.addWorksheet('Users');
+
+    // Define column headers for user data
+    usersSheet.columns = [
+      { header: 'User ID', key: 'id', width: 36 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'First Name', key: 'firstName', width: 20 },
+      { header: 'Last Name', key: 'lastName', width: 20 },
+      { header: 'Phone', key: 'phone', width: 15 },
+      { header: 'Address', key: 'address', width: 40 },
+      { header: 'City', key: 'city', width: 20 },
+      { header: 'State', key: 'state', width: 10 },
+      { header: 'ZIP Code', key: 'zipCode', width: 12 },
+      { header: 'Date of Birth', key: 'dateOfBirth', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Role', key: 'role', width: 10 },
+      { header: 'Is Active', key: 'isActive', width: 10 },
+      { header: 'Last Login', key: 'lastLoginAt', width: 20 },
+      { header: 'Created At', key: 'createdAt', width: 20 },
+      { header: 'Updated At', key: 'updatedAt', width: 20 }
+    ];
+
+    // Add data rows
+    users.forEach(user => {
+      usersSheet.addRow({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
+        state: user.state,
+        zipCode: user.zipCode,
+        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : null,
+        status: user.status,
+        role: user.role,
+        isActive: user.isActive ? 'Yes' : 'No',
+        lastLoginAt: user.lastLoginAt ? new Date(user.lastLoginAt) : null,
+        createdAt: user.createdAt ? new Date(user.createdAt) : null,
+        updatedAt: user.updatedAt ? new Date(user.updatedAt) : null
+      });
+    });
+
+    // Style the header row
+    const headerRow = usersSheet.getRow(1);
+    headerRow.font = { bold: true };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE6F3FF' }
+    };
 
     return workbook;
   }

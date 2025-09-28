@@ -627,10 +627,23 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async updateUserStatus(userId: string, isActive: boolean): Promise<User> {
+  async updateUserStatus(userId: string, isActiveOrStatus: boolean | string): Promise<User> {
+    let updateData: any = { updatedAt: new Date() };
+
+    if (typeof isActiveOrStatus === 'boolean') {
+      // Handle isActive boolean
+      updateData.isActive = isActiveOrStatus;
+    } else {
+      // Handle status string (pending, approved, rejected)
+      updateData.status = isActiveOrStatus;
+      if (isActiveOrStatus === 'approved') {
+        updateData.isActive = true; // Auto-activate approved users
+      }
+    }
+
     const [updated] = await db
       .update(users)
-      .set({ isActive, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(users.id, userId))
       .returning();
     return updated;
