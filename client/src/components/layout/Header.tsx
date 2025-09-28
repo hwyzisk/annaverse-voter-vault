@@ -16,7 +16,7 @@ interface HeaderProps {
 
 export default function Header({ user, onProfileClick, onNotificationClick, onMobileMenuClick, showMobileMenu }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
-  
+
   const formatName = (user: User) => {
     if (user.firstName && user.lastName) {
       return `${user.firstName} ${user.lastName}`;
@@ -38,7 +38,7 @@ export default function Header({ user, onProfileClick, onNotificationClick, onMo
   const handleLogout = () => {
     window.location.href = "/api/logout";
   };
-  
+
   return (
     <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">

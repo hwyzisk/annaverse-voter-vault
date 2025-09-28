@@ -8,6 +8,7 @@ import UserProfileModal from "@/components/profile/UserProfileModal";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GlassCard, GlassProgress, GlassBadge } from "@/components/ui/GlassCard";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
