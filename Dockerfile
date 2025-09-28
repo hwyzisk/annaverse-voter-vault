@@ -36,7 +36,7 @@ COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
 # Copy built application
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/client/dist ./client/dist
+#COPY --from=builder --chown=nodejs:nodejs /app/client/dist ./client/dist
 COPY --from=builder --chown=nodejs:nodejs /app/server ./server
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
