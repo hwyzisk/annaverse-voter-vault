@@ -1810,44 +1810,42 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 </Card>
 
                 {/* District Information */}
-                <Accordion type="multiple" defaultValue={[]} className="border rounded-lg">
-                  <AccordionItem value="districts">
-                    <AccordionTrigger className="px-6 py-4 text-base font-medium">
-                      <div className="flex items-center gap-2">
-                        <span>District Information</span>
-                        <Lock className="w-4 h-4 text-yellow-500" />
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <span>District Information</span>
+                      <Lock className="w-4 h-4 text-yellow-500" />
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground">Precinct</Label>
+                        <p className="text-sm mt-1">{details.precinct || 'Not provided'}</p>
                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-6 pb-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-muted-foreground">Precinct</Label>
-                          <p className="text-sm mt-1">{details.precinct || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground">Congressional District</Label>
-                          <p className="text-sm mt-1">{details.district || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground">House District</Label>
-                          <p className="text-sm mt-1">{details.houseDistrict || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground">Senate District</Label>
-                          <p className="text-sm mt-1">{details.senateDistrict || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground">Commission District</Label>
-                          <p className="text-sm mt-1">{details.commissionDistrict || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <Label className="text-muted-foreground">School Board District</Label>
-                          <p className="text-sm mt-1">{details.schoolBoardDistrict || 'Not provided'}</p>
-                        </div>
+                      <div>
+                        <Label className="text-muted-foreground">Congressional District</Label>
+                        <p className="text-sm mt-1">{details.district || 'Not provided'}</p>
                       </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
+                      <div>
+                        <Label className="text-muted-foreground">House District</Label>
+                        <p className="text-sm mt-1">{details.houseDistrict || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Senate District</Label>
+                        <p className="text-sm mt-1">{details.senateDistrict || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">Commission District</Label>
+                        <p className="text-sm mt-1">{details.commissionDistrict || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground">School Board District</Label>
+                        <p className="text-sm mt-1">{details.schoolBoardDistrict || 'Not provided'}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Activity Timeline */}
                 <Card>
