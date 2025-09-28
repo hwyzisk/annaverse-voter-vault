@@ -39,7 +39,7 @@ import path from "path";
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB max file size
+    fileSize: 200 * 1024 * 1024, // 200MB max file size for large contact imports
     files: 1 // Only allow single file upload
   },
   fileFilter: (req, file, cb) => {
@@ -709,7 +709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     upload.single('excel')(req, res, (err: any) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({ message: 'File too large. Maximum size is 50MB.' });
+          return res.status(413).json({ message: 'File too large. Maximum size is 200MB.' });
         }
         if (err.code === 'LIMIT_FILE_COUNT') {
           return res.status(400).json({ message: 'Too many files. Only one file allowed.' });
@@ -802,7 +802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     upload.single('excel')(req, res, (err: any) => {
       if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-          return res.status(413).json({ message: 'File too large. Maximum size is 50MB.' });
+          return res.status(413).json({ message: 'File too large. Maximum size is 200MB.' });
         }
         if (err.code === 'LIMIT_FILE_COUNT') {
           return res.status(400).json({ message: 'Too many files. Only one file allowed.' });
