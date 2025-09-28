@@ -16,7 +16,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (savedTheme && ['light', 'dark', 'glass'].includes(savedTheme)) {
         return savedTheme;
       }
-      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      return 'light'; // Default to light mode regardless of system preference
     }
     return 'light';
   });
