@@ -17,9 +17,10 @@ export async function setupAuth(app: Express) {
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: false, // Temporarily disabled for debugging
+      secure: process.env.NODE_ENV === 'production', // Secure cookies in production with HTTPS
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax' // Help prevent CSRF while allowing normal navigation
     }
   }));
 }

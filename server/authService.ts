@@ -64,7 +64,7 @@ export class AuthService {
         zipCode: userData.zipCode,
         dateOfBirth: userData.dateOfBirth, // Keep as string, will be converted by DB
         status: 'pending',
-        role: 'viewer', // Default role, admin can change during approval
+        role: 'editor', // Default role as per requirements
         isActive: false, // Inactive until approved
       } as any);
 
@@ -148,7 +148,7 @@ export class AuthService {
   }
 
   // Approve user registration
-  static async approveUser(userId: string, role: 'admin' | 'editor' | 'viewer' = 'viewer'): Promise<{ success: boolean; message: string }> {
+  static async approveUser(userId: string, role: 'admin' | 'editor' | 'viewer' = 'editor'): Promise<{ success: boolean; message: string }> {
     try {
       const user = await storage.getUser(userId);
       if (!user) {
