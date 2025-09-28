@@ -273,7 +273,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                         </div>
                       </td>
                       <td className="px-6 py-4" data-testid={`text-party-${contact.id}`}>
-                        <span className={`text-sm font-medium ${getPartyColor(contact.party)}`}>
+                        <span className={`party-text text-sm font-medium ${getPartyColor(contact.party)}`}>
                           {formatParty(contact.party)}
                         </span>
                       </td>
@@ -336,7 +336,7 @@ export default function SearchResults({ nameSearch, filters, onContactSelect }: 
                         >
                           {formatVolunteerStatus(contact.volunteerLikeliness || 'unknown')}
                         </Badge>
-                        <Badge variant="outline" className={`${getPartyColor(contact.party)} border-current`}>
+                        <Badge variant="outline" className={`party-badge ${getPartyColor(contact.party)} border-current`}>
                           {formatParty(contact.party)}
                         </Badge>
                       </div>

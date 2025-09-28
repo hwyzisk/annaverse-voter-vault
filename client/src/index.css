@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import './styles/glassmorphism.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -123,5 +124,62 @@
     flex: 1;
     overflow: auto;
     min-height: 0;
+  }
+
+  /* Theme-aware scrollbar styling */
+  /* Base (Light mode) */
+  * {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: hsl(210, 14%, 70%) transparent; /* thumb track */
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(210, 14%, 70%);
+    border-radius: 8px;
+    border: 2px solid transparent; /* creates padding for thumb */
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(210, 14%, 55%);
+  }
+
+  /* Dark mode overrides */
+  .dark * {
+    scrollbar-color: hsl(210, 8%, 35%) rgba(255, 255, 255, 0.06);
+  }
+  .dark *::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .dark *::-webkit-scrollbar-thumb {
+    background-color: hsl(210, 8%, 35%);
+    border: 2px solid rgba(0, 0, 0, 0.25);
+  }
+  .dark *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(210, 8%, 45%);
+  }
+
+  /* Party mode (glass) overrides */
+  .glass * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.6) rgba(255, 255, 255, 0.12);
+  }
+  .glass *::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(4px);
+  }
+  .glass *::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, rgba(255, 0, 128, 0.7), rgba(0, 255, 255, 0.7));
+    border-radius: 10px;
+    border: 2px solid rgba(0, 0, 0, 0.25);
+    box-shadow: 0 0 10px rgba(255, 0, 128, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .glass *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.8), rgba(128, 255, 0, 0.85));
   }
 }

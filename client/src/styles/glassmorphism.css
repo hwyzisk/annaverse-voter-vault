@@ -1,0 +1,456 @@
+/* 🔮 CLEAN GLASSMORPHISM DESIGN SYSTEM */
+
+/* ===== PHASE 1: CORE BACKGROUND ONLY ===== */
+
+/* SERIOUSLY BRIGHT RAINBOW - Using button border color spectrum! */
+.glass body {
+  background:
+    linear-gradient(45deg,
+      #ff0080 0%,
+      #00ffff 12.5%,
+      #80ff00 25%,
+      #ff8000 37.5%,
+      #8000ff 50%,
+      #ff0080 62.5%,
+      #00ffff 75%,
+      #80ff00 87.5%,
+      #ff8000 100%),
+    radial-gradient(ellipse at 25% 75%, rgba(255, 0, 128, 0.6) 0%, transparent 45%),
+    radial-gradient(ellipse at 75% 25%, rgba(0, 255, 255, 0.6) 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 10%, rgba(128, 255, 0, 0.5) 0%, transparent 35%),
+    radial-gradient(ellipse at 90% 90%, rgba(255, 128, 0, 0.5) 0%, transparent 35%),
+    radial-gradient(ellipse at 10% 50%, rgba(128, 0, 255, 0.4) 0%, transparent 40%) !important;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* ===== PHASE 2: BASIC GLASS EFFECTS ===== */
+
+/* Main background containers */
+.glass .bg-background {
+  background:
+    linear-gradient(135deg, rgba(120, 119, 198, 0.1) 0%, rgba(255, 119, 198, 0.05) 100%),
+    rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Cards with glass effect */
+.glass .bg-card {
+  background:
+    linear-gradient(135deg, rgba(120, 119, 198, 0.15) 0%, rgba(255, 119, 198, 0.1) 50%, rgba(119, 255, 198, 0.1) 100%),
+    rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(25px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 12px 40px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(120, 119, 198, 0.3) !important;
+}
+
+/* ===== PHASE 3: TEXT STYLING ===== */
+
+/* Force all text to be white - exclude dropdown elements */
+.glass *:not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-tooltip-content]):not([data-radix-popover-content]):not([data-radix-dropdown-menu-content] *):not([data-radix-select-content] *):not([data-radix-tooltip-content] *):not([data-radix-popover-content] *):not(.party-text):not(.party-badge) {
+  color: #ffffff !important;
+}
+
+.glass .text-foreground {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  text-shadow:
+    0 0 20px rgba(0, 0, 0, 1),
+    0 2px 4px rgba(0, 0, 0, 1) !important;
+}
+
+.glass .text-muted-foreground {
+  color: rgba(255, 255, 255, 0.9) !important;
+  font-weight: 500 !important;
+  text-shadow:
+    0 0 15px rgba(0, 0, 0, 0.9),
+    0 1px 3px rgba(0, 0, 0, 1) !important;
+}
+
+.glass h1, .glass h2, .glass h3, .glass h4, .glass h5, .glass h6 {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow:
+    0 0 25px rgba(0, 0, 0, 1),
+    0 3px 6px rgba(0, 0, 0, 1) !important;
+}
+
+/* ===== PHASE 4: INTERACTIVE ELEMENTS (NO ANIMATIONS) ===== */
+
+/* Glass buttons - NO animations */
+.glass button:not(.glass-button) {
+  background:
+    linear-gradient(135deg, rgba(120, 119, 198, 0.3) 0%, rgba(255, 119, 198, 0.2) 100%),
+    rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 15px rgba(0, 0, 0, 1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 8px 25px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(120, 119, 198, 0.4) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass button:not(.glass-button):hover {
+  background:
+    linear-gradient(135deg, rgba(120, 119, 198, 0.4) 0%, rgba(255, 119, 198, 0.3) 100%),
+    rgba(0, 0, 0, 0.7) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 12px 35px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(120, 119, 198, 0.6) !important;
+}
+
+/* Glass inputs */
+.glass input, .glass textarea, .glass select {
+  background:
+    linear-gradient(135deg, rgba(120, 119, 198, 0.15) 0%, rgba(255, 119, 198, 0.1) 100%),
+    rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(20px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 15px rgba(0, 0, 0, 0.3) !important;
+}
+
+.glass input::placeholder, .glass textarea::placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-weight: 500 !important;
+}
+
+.glass input:focus, .glass textarea:focus, .glass select:focus {
+  background:
+    linear-gradient(135deg, rgba(120, 119, 198, 0.25) 0%, rgba(255, 119, 198, 0.15) 100%),
+    rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 8px 25px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(120, 119, 198, 0.5) !important;
+  outline: none !important;
+}
+
+/* ===== PHASE 5: ANIMATIONS & EFFECTS ===== */
+
+/* INTENSE floating rainbow waves - matching button border spectrum */
+.glass body::before {
+  content: '';
+  position: fixed;
+  inset: 0; /* Fill viewport without triggering 100vw/100vh overflow */
+  background:
+    linear-gradient(45deg, transparent 20%, rgba(255, 0, 128, 0.25) 50%, transparent 80%),
+    linear-gradient(135deg, transparent 20%, rgba(0, 255, 255, 0.25) 50%, transparent 80%),
+    linear-gradient(225deg, transparent 20%, rgba(128, 255, 0, 0.25) 50%, transparent 80%),
+    linear-gradient(315deg, transparent 20%, rgba(255, 128, 0, 0.2) 50%, transparent 80%);
+  animation: auroraFloat 30s ease-in-out infinite;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes auroraFloat {
+  0%, 100% { opacity: 0.4; transform: translateY(0px) scale(1); }
+  50% { opacity: 0.7; transform: translateY(-20px) scale(1.02); }
+}
+
+/* ===== PHASE 6: RAINBOW EFFECTS ===== */
+
+/* Rainbow borders for selected sidebar navigation items - curved borders */
+.glass nav a.bg-primary,
+.glass nav a.text-primary-foreground,
+.glass nav a[class*="bg-primary text-primary-foreground"],
+.glass aside nav a[class*="bg-primary"] {
+  background: linear-gradient(135deg, rgba(255, 0, 128, 0.4), rgba(0, 255, 128, 0.3), rgba(128, 0, 255, 0.3)),
+              rgba(0, 0, 0, 0.8) !important;
+  border: 2px solid transparent !important;
+  border-radius: 0.5rem !important;
+  background-clip: padding-box !important;
+  position: relative !important;
+  box-shadow:
+    0 0 30px rgba(255, 0, 128, 0.9),
+    0 0 20px rgba(0, 255, 128, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  animation: rainbowGlow 2s ease-in-out infinite alternate;
+}
+
+.glass nav a.bg-primary::before,
+.glass nav a.text-primary-foreground::before,
+.glass nav a[class*="bg-primary text-primary-foreground"]::before,
+.glass aside nav a[class*="bg-primary"]::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ff0080, #00ffff, #80ff00, #ff8000, #ff0080);
+  border-radius: 0.5rem;
+  z-index: -1;
+}
+
+@keyframes rainbowGlow {
+  0% {
+    box-shadow:
+      0 0 30px rgba(255, 0, 128, 0.9),
+      0 0 20px rgba(0, 255, 128, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    box-shadow:
+      0 0 40px rgba(0, 255, 255, 0.9),
+      0 0 25px rgba(128, 255, 0, 0.8),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+}
+
+/* ===== PHASE 7: BORDER OVERRIDES ===== */
+
+/* Remove borders - exclude dropdown elements */
+.glass *:not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-tooltip-content]):not([data-radix-popover-content]) {
+  border-color: transparent !important;
+}
+
+.glass .border, .glass .border-border, .glass .border-gray-200, .glass .border-gray-300 {
+  border: none !important;
+}
+
+/* Override light backgrounds */
+.glass .bg-white, .glass .bg-gray-50, .glass .bg-gray-100, .glass .bg-slate-50 {
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+.glass aside, .glass .sidebar {
+  background: rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(25px) !important;
+}
+
+/* ===== PHASE 8: RAINBOW BUTTON EFFECTS ===== */
+
+/* Rainbow hover states only for buttons - exclude dropdown triggers */
+.glass button:hover:not([class*="bg-primary"]):not(.glass-button):not([data-radix-dropdown-menu-trigger]):not([data-radix-select-trigger]):not([data-radix-popover-trigger]) {
+  border: 2px solid transparent !important;
+  border-radius: 0.5rem !important;
+  background-clip: padding-box !important;
+  position: relative !important;
+  box-shadow:
+    0 5px 20px rgba(255, 0, 128, 0.4),
+    0 0 15px rgba(0, 255, 255, 0.3) !important;
+  transition: all 0.3s ease;
+}
+
+.glass button:hover:not([class*="bg-primary"]):not(.glass-button):not([data-radix-dropdown-menu-trigger]):not([data-radix-select-trigger]):not([data-radix-popover-trigger])::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #ff0080, #00ffff, #80ff00, #ff8000, #ff0080);
+  border-radius: 0.5rem;
+  z-index: -1;
+}
+
+/* Rainbow focus states - exclude dropdown triggers */
+.glass input:focus, .glass textarea:focus, .glass select:focus,
+.glass button:focus:not([data-radix-dropdown-menu-trigger]):not([data-radix-select-trigger]) {
+  border: 3px solid !important;
+  border-image: linear-gradient(45deg, #ff0080, #00ffff, #80ff00, #ff8000, #ff0080) 1 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 8px 25px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(255, 0, 128, 0.7) !important;
+}
+
+/* ===== PHASE 9: RAINBOW BADGES AND LOADING EFFECTS ===== */
+
+/* Rainbow badges and status indicators */
+.glass .badge,
+.glass .chip,
+.glass [class*="badge"],
+.glass .status-indicator {
+  background: linear-gradient(135deg, #ff0080, #00ff80, #8000ff) !important;
+  border: 1px solid !important;
+  border-image: linear-gradient(45deg, #ff0080, #00ffff, #80ff00, #ff8000, #ff0080) 1 !important;
+  box-shadow:
+    0 0 15px rgba(255, 0, 128, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Rainbow loading states and progress indicators */
+.glass .loading,
+.glass .spinner,
+.glass [class*="loading"],
+.glass .progress-bar {
+  border: 2px solid !important;
+  border-image: linear-gradient(45deg, #ff0080, #00ffff, #80ff00, #ff8000, #ff0080) 1 !important;
+  animation: rainbowSpin 2s linear infinite;
+}
+
+@keyframes rainbowSpin {
+  0% {
+    border-image: linear-gradient(45deg, #ff0080, #00ffff, #80ff00, #ff8000, #ff0080) 1;
+    box-shadow: 0 0 20px rgba(255, 0, 128, 0.6);
+  }
+  25% {
+    border-image: linear-gradient(45deg, #00ffff, #80ff00, #ff8000, #ff0080, #00ffff) 1;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+  }
+  50% {
+    border-image: linear-gradient(45deg, #80ff00, #ff8000, #ff0080, #00ffff, #80ff00) 1;
+    box-shadow: 0 0 20px rgba(128, 255, 0, 0.6);
+  }
+  75% {
+    border-image: linear-gradient(45deg, #ff8000, #ff0080, #00ffff, #80ff00, #ff8000) 1;
+    box-shadow: 0 0 20px rgba(255, 128, 0, 0.6);
+  }
+  100% {
+    border-image: linear-gradient(45deg, #ff0080, #00ffff, #80ff00, #ff8000, #ff0080) 1;
+    box-shadow: 0 0 20px rgba(255, 0, 128, 0.6);
+  }
+}
+
+/* Rainbow search and filter highlights */
+.glass .search-result,
+.glass .filter-active,
+.glass .highlighted,
+.glass [class*="highlight"] {
+  background: linear-gradient(135deg, rgba(255, 0, 128, 0.2), rgba(0, 255, 255, 0.1)) !important;
+  border: 1px solid !important;
+  border-image: linear-gradient(45deg, #ff0080, #00ffff, #80ff00) 1 !important;
+  box-shadow:
+    0 0 20px rgba(255, 0, 128, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+}
+
+/* ===== PHASE 10: FINAL EFFECTS ===== */
+
+/* Core Glass Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Glass Cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  border-radius: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Rainbow dividers and separators - exclude modal elements */
+.glass hr:not([role="dialog"] *):not(.modal *),
+.glass .divider:not([role="dialog"] *):not(.modal *),
+.glass .separator:not([role="dialog"] *):not(.modal *),
+.glass [class*="divider"]:not([role="dialog"] *):not(.modal *):not([class*="modal"]):not([data-radix-dialog-content] *) {
+  border: none !important;
+  height: 2px !important;
+  background: linear-gradient(90deg, #ff0080, #00ffff, #80ff00, #ff8000, #8000ff) !important;
+  box-shadow: 0 0 10px rgba(255, 0, 128, 0.5) !important;
+}
+
+/* Rainbow validation states */
+.glass .error,
+.glass .success,
+.glass .warning,
+.glass [class*="error"],
+.glass [class*="success"],
+.glass [class*="warning"] {
+  border: 2px solid !important;
+  border-image: linear-gradient(45deg, #ff0080, #ff8000, #ff0080) 1 !important;
+  box-shadow:
+    0 0 20px rgba(255, 0, 128, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+/* ===== MODAL CLOSE BUTTON EXCLUSIONS ===== */
+
+/* Exclude only the close button (X) from rainbow effects */
+.glass [role="dialog"] button[class*="absolute"][class*="right-4"][class*="top-4"],
+.glass .modal button[class*="absolute"][class*="right-4"][class*="top-4"],
+.glass [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"],
+.glass button[class*="ring-offset-background"] {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-image: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  animation: none !important;
+}
+
+.glass [role="dialog"] button[class*="absolute"][class*="right-4"][class*="top-4"]::before,
+.glass [role="dialog"] button[class*="absolute"][class*="right-4"][class*="top-4"]::after,
+.glass .modal button[class*="absolute"][class*="right-4"][class*="top-4"]::before,
+.glass .modal button[class*="absolute"][class*="right-4"][class*="top-4"]::after,
+.glass [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"]::before,
+.glass [data-radix-dialog-content] button[class*="absolute"][class*="right-4"][class*="top-4"]::after,
+.glass button[class*="ring-offset-background"]::before,
+.glass button[class*="ring-offset-background"]::after {
+  display: none !important;
+}
+
+/* ===== GLASS MODE COMPLETE ===== */
+
+/* 🎉 Successfully rebuilt glass mode with no dropdown flashing issues! */
+
+/* Prevent viewport scrollbars in party (glass) mode */
+.glass, .glass body {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+/* Preserve party colors in party mode (exclude from global white text) */
+.glass *:not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-tooltip-content]):not([data-radix-popover-content]):not([data-radix-dropdown-menu-content] *):not([data-radix-select-content] *):not([data-radix-tooltip-content] *):not([data-radix-popover-content] *):not(.party-text):not(.party-badge) {
+  color: #ffffff !important;
+}
+
+/* Party label readability enhancements in party mode */
+.glass .party-text,
+.glass .party-badge {
+  position: relative;
+}
+
+/* DEM (blue) */
+.glass .party-text.text-blue-600,
+.glass .party-badge.text-blue-600 {
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.85), 0 0 2px rgba(59, 130, 246, 0.9);
+}
+.glass .party-badge.text-blue-600 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+/* REP (red) */
+.glass .party-text.text-red-600,
+.glass .party-badge.text-red-600 {
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.85), 0 0 2px rgba(239, 68, 68, 0.9);
+}
+.glass .party-badge.text-red-600 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Neutral/other parties remain readable due to glass text styling; add a faint outline for badges */
+.glass .party-badge:not(.text-blue-600):not(.text-red-600) {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
