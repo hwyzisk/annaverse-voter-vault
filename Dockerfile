@@ -42,7 +42,7 @@ COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 COPY --from=builder --chown=nodejs:nodejs /app/package.json ./package.json
 
 # Copy migrations if they exist
-COPY --from=builder --chown=nodejs:nodejs /app/migrations ./migrations 2>/dev/null || true
+#COPY --from=builder --chown=nodejs:nodejs /app/migrations ./migrations 2>/dev/null || true
 
 USER nodejs
 
