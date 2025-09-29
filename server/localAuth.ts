@@ -12,7 +12,7 @@ export async function setupAuth(app: Express) {
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax' as const, // Help prevent CSRF while allowing normal navigation
-    domain: process.env.NODE_ENV === 'production' ? '.annaverseapp.com' : undefined, // Set domain for production (with dot for subdomains)
+    // domain: process.env.NODE_ENV === 'production' ? '.annaverseapp.com' : undefined, // Removed domain - let browser handle automatically
     path: '/' // Ensure cookie is available for all paths
   };
 
@@ -38,6 +38,7 @@ export function isAuthenticated(req: any, res: any, next: any) {
     sessionId: req.session?.id,
     userId: req.session?.userId,
     cookies: req.headers.cookie ? 'Present' : 'Missing',
+    cookieHeader: req.headers.cookie,
     url: req.url
   });
 
@@ -63,6 +64,19 @@ export function setUserSession(req: any, userId: string) {
   req.session.userId = userId;
   console.log('💾 Session after:', req.session?.userId || 'Failed to set');
   console.log('💾 Session ID:', req.session?.id || 'No session ID');
+
+  // Force session save to ensure it's persisted before response
+  return new Promise((resolve, reject) => {
+    req.session.save((err: any) => {
+      if (err) {
+        console.error('💥 Session save error:', err);
+        reject(err);
+      } else {
+        console.log('✅ Session saved successfully');
+        resolve(true);
+      }
+    });
+  });
 }
 
 // Helper to clear user session
