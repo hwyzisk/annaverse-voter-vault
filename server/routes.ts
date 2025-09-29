@@ -98,9 +98,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
+      console.log('👤 Auth check - Session ID:', req.session?.userId || 'No session');
+      console.log('👤 Auth check - User claims:', req.user?.claims?.sub || 'No user claims');
+
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-      
+
+      console.log('👤 Found user:', user ? `${user.email} (${user.id})` : 'No user found');
+
       // Update last login
       if (user) {
         await storage.upsertUser({
@@ -112,10 +117,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastLoginAt: new Date(),
         });
       }
-      
+
       res.json(user);
     } catch (error) {
-      console.error("Error fetching user:", error);
+      console.error("💥 Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
@@ -133,18 +138,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/login', async (req: any, res) => {
     try {
+      console.log('🔐 Login attempt for:', req.body.email);
+      console.log('🍪 Session before login:', req.session?.userId || 'No session');
+      console.log('🌐 Environment:', process.env.NODE_ENV);
+      console.log('🔒 Cookie settings:', {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax'
+      });
+
       const { email, password } = req.body;
       const result = await AuthService.loginUser({ email, password });
 
       if (result.success && result.user) {
         // Set session for authenticated user
         setUserSession(req, result.user.id);
+        console.log('✅ Session set for user:', result.user.id);
+        console.log('🍪 Session after login:', req.session?.userId || 'Failed to set session');
+        console.log('📤 Sending success response');
         res.json(result);
       } else {
+        console.log('❌ Login failed:', result.message);
         res.status(401).json(result);
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('💥 Login error:', error);
       res.status(500).json({ success: false, message: 'Login failed' });
     }
   });
