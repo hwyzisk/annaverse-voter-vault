@@ -61,20 +61,34 @@ export function isAuthenticated(req: any, res: any, next: any) {
 export function setUserSession(req: any, userId: string) {
   console.log('💾 Setting session for user:', userId);
   console.log('💾 Session before:', req.session?.userId || 'No session');
-  req.session.userId = userId;
-  console.log('💾 Session after:', req.session?.userId || 'Failed to set');
-  console.log('💾 Session ID:', req.session?.id || 'No session ID');
+  console.log('💾 Old session ID:', req.session?.id || 'No session ID');
 
-  // Force session save to ensure it's persisted before response
+  // Regenerate session to create new session ID and clear any old data
   return new Promise((resolve, reject) => {
-    req.session.save((err: any) => {
+    req.session.regenerate((err: any) => {
       if (err) {
-        console.error('💥 Session save error:', err);
+        console.error('💥 Session regenerate error:', err);
         reject(err);
-      } else {
-        console.log('✅ Session saved successfully');
-        resolve(true);
+        return;
       }
+
+      console.log('🔄 Session regenerated');
+      console.log('💾 New session ID:', req.session?.id || 'No session ID');
+
+      // Set user ID in the new session
+      req.session.userId = userId;
+      console.log('💾 Session after:', req.session?.userId || 'Failed to set');
+
+      // Save the session
+      req.session.save((saveErr: any) => {
+        if (saveErr) {
+          console.error('💥 Session save error:', saveErr);
+          reject(saveErr);
+        } else {
+          console.log('✅ Session saved successfully');
+          resolve(true);
+        }
+      });
     });
   });
 }
