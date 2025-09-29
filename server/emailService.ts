@@ -11,10 +11,12 @@ if (process.env.SENDGRID_API_KEY) {
 
 interface EmailParams {
   to: string;
-  from: string;
+  from: string | { email: string; name: string };
+  replyTo?: string;
   subject: string;
   text?: string;
   html?: string;
+  headers?: Record<string, string>;
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
@@ -27,14 +29,19 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     await mailService.send({
       to: params.to,
       from: params.from,
+      replyTo: params.replyTo,
       subject: params.subject,
       text: params.text || '', // Provide empty string if undefined
       html: params.html,
+      headers: params.headers,
     });
-    console.log(`Email sent successfully to ${params.to || 'unknown recipient'}`);
+    console.log(`✅ Email sent successfully to ${params.to || 'unknown recipient'}: ${params.subject}`);
     return true;
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('❌ SendGrid email error:', error);
+    if (error.response?.body) {
+      console.error('SendGrid response body:', error.response.body);
+    }
     return false;
   }
 }

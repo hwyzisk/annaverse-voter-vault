@@ -14,7 +14,8 @@
       "Bash(netstat:*)",
       "Bash(pkill:*)",
       "Bash(set PORT=3001)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(del test-email.js test-registration.js)"
     ],
     "deny": [],
     "ask": []

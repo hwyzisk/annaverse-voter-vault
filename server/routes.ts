@@ -505,25 +505,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User approval endpoints
-  app.patch('/api/admin/users/:id/approve', isAuthenticated, requireRole(['admin']), async (req, res) => {
-    try {
-      const user = await storage.updateUserStatus(req.params.id, 'approved');
-      res.json(user);
-    } catch (error) {
-      console.error("Error approving user:", error);
-      res.status(500).json({ message: "Failed to approve user" });
-    }
-  });
-
-  app.patch('/api/admin/users/:id/reject', isAuthenticated, requireRole(['admin']), async (req, res) => {
-    try {
-      const user = await storage.updateUserStatus(req.params.id, 'rejected');
-      res.json(user);
-    } catch (error) {
-      console.error("Error rejecting user:", error);
-      res.status(500).json({ message: "Failed to reject user" });
-    }
-  });
+  // Note: These endpoints removed in favor of proper approval workflow
+  // Use POST /api/admin/approve-user/:id and POST /api/admin/reject-user/:id instead
+  // Those endpoints use AuthService which sends proper emails and handles full workflow
 
   // User export endpoint
   app.get('/api/admin/users/export', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
