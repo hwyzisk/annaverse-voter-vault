@@ -18,16 +18,20 @@ export async function setupAuth(app: Express) {
 
   console.log('🍪 Session cookie configuration:', cookieConfig);
 
+  const store = new PgSession({
+    pool: pool,
+    tableName: 'sessions',
+    createTableIfMissing: true, // Create table if it doesn't exist
+    errorLog: (err: any) => {
+      console.error('🔥 PostgreSQL session store error:', err);
+    }
+  });
+
   app.use(session({
-    // Temporarily disable PostgreSQL store to test if that's the issue
-    // store: new PgSession({
-    //   pool: pool,
-    //   tableName: 'sessions',
-    //   createTableIfMissing: false
-    // }),
+    store: store,
     secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev',
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     cookie: cookieConfig
   }));
 }
