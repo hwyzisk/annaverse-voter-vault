@@ -1,6 +1,6 @@
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, TrendingUp, MessageSquare } from "lucide-react";
+import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, TrendingUp, MessageSquare, Share2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -113,6 +113,17 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
             >
               <MessageSquare className="w-5 h-5" />
               <span>Talking Points</span>
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="/share"
+              className={getLinkClassName('/share')}
+              data-testid="link-share"
+            >
+              <Share2 className="w-5 h-5" />
+              <span>Share Anna's Story</span>
             </a>
           </li>
         </ul>
