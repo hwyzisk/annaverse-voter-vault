@@ -155,13 +155,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         setUserSession(req, result.user.id);
         console.log('✅ Session set for user:', result.user.id);
 
-        // TEST: Let express-session handle the cookie naturally
-        // Just log what it should do
-        console.log('🍪 Session should be saved automatically by express-session');
-        console.log('🍪 Session data:', { id: req.session.id, userId: req.session.userId });
+        // Force session save and check headers
+        req.session.save((err) => {
+          if (err) {
+            console.error('💥 Session save error:', err);
+          } else {
+            console.log('✅ Session saved to store');
+          }
 
-        console.log('📤 Sending success response');
-        res.json(result);
+          const allHeaders = res.getHeaders();
+          console.log('🍪 ALL response headers:', allHeaders);
+          console.log('🍪 Set-Cookie header specifically:', allHeaders['set-cookie']);
+
+          console.log('📤 Sending success response');
+          res.json(result);
+        });
       } else {
         console.log('❌ Login failed:', result.message);
         res.status(401).json(result);
