@@ -15,6 +15,7 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Network from "@/pages/network";
 import OurImpact from "@/pages/OurImpact";
+import VolunteerMessagingGuidance from "@/pages/VolunteerMessagingGuidance";
 import GlassmorphismShowcase from "@/pages/GlassmorphismShowcase";
 
 function Router() {
@@ -47,6 +48,7 @@ function Router() {
           <>
             <Route path="/" component={HomeFull} />
             <Route path="/network" component={Network} />
+            <Route path="/talking-points" component={VolunteerMessagingGuidance} />
             <Route path="/our-impact" component={OurImpact} />
             <Route path="/admin" component={Admin} />
             <Route path="/glassmorphism" component={GlassmorphismShowcase} />

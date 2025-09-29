@@ -1,6 +1,6 @@
 import type { User } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, TrendingUp } from "lucide-react";
+import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, TrendingUp, MessageSquare } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -102,6 +102,17 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
             >
               <TrendingUp className="w-5 h-5" />
               <span>Our Impact</span>
+            </a>
+          </li>
+
+          <li>
+            <a
+              href="/talking-points"
+              className={getLinkClassName('/talking-points')}
+              data-testid="link-talking-points"
+            >
+              <MessageSquare className="w-5 h-5" />
+              <span>Talking Points</span>
             </a>
           </li>
         </ul>
