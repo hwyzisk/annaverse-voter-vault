@@ -529,20 +529,21 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                       <p className="mt-2 text-muted-foreground">Loading users...</p>
                     </div>
                   ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Last Login</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {users?.map((userItem) => (
+                    <div className="max-h-96 overflow-auto">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-background border-b z-10">
+                            <TableRow>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Role</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Last Login</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {users?.map((userItem) => (
                             <TableRow key={userItem.id}>
                               <TableCell>
                                 <div>
@@ -688,6 +689,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     </div>
                   )}
                 </CardContent>
