@@ -6,25 +6,22 @@ import { pool } from "./db";
 const PgSession = connectPg(session);
 
 export async function setupAuth(app: Express) {
+  // CRUCIAL: Trust the first proxy (nginx) for secure cookies and Set-Cookie headers
+  app.set('trust proxy', 1);
+
   // Session configuration
   const cookieConfig = {
     secure: process.env.NODE_ENV === 'production', // Secure cookies in production with HTTPS
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     sameSite: 'lax' as const, // Help prevent CSRF while allowing normal navigation
-    // domain: process.env.NODE_ENV === 'production' ? '.annaverseapp.com' : undefined, // Removed domain - let browser handle automatically
     path: '/' // Ensure cookie is available for all paths
   };
-
-  console.log('🍪 Session cookie configuration:', cookieConfig);
 
   const store = new PgSession({
     pool: pool,
     tableName: 'sessions',
-    createTableIfMissing: true, // Create table if it doesn't exist
-    errorLog: (err: any) => {
-      console.error('🔥 PostgreSQL session store error:', err);
-    }
+    createTableIfMissing: false
   });
 
   app.use(session({
@@ -38,15 +35,6 @@ export async function setupAuth(app: Express) {
 
 // Middleware to check if user is authenticated
 export function isAuthenticated(req: any, res: any, next: any) {
-  console.log('🔍 Auth middleware check:', {
-    sessionExists: !!req.session,
-    sessionId: req.session?.id,
-    userId: req.session?.userId,
-    cookies: req.headers.cookie ? 'Present' : 'Missing',
-    cookieHeader: req.headers.cookie,
-    url: req.url
-  });
-
   if (req.session && req.session.userId) {
     // Add user info to request object in the same format as Replit auth
     req.user = {
@@ -54,36 +42,15 @@ export function isAuthenticated(req: any, res: any, next: any) {
         sub: req.session.userId
       }
     };
-    console.log('✅ Authentication successful for user:', req.session.userId);
     return next();
   }
 
-  console.log('❌ Authentication failed - no valid session');
   res.status(401).json({ message: "Authentication required" });
 }
 
 // Helper to set user session
 export function setUserSession(req: any, userId: string) {
-  console.log('💾 Setting session for user:', userId);
-  console.log('💾 Old session ID:', req.session?.id || 'No session ID');
-
-  // Destroy existing session and create new one
-  return new Promise((resolve, reject) => {
-    req.session.regenerate((err: any) => {
-      if (err) {
-        console.error('💥 Session regenerate error:', err);
-        // If regenerate fails, try normal assignment
-        req.session.userId = userId;
-        resolve(true);
-        return;
-      }
-
-      console.log('🔄 Session regenerated, new ID:', req.session?.id);
-      req.session.userId = userId;
-      console.log('💾 Session after setting userId:', req.session?.userId);
-      resolve(true);
-    });
-  });
+  req.session.userId = userId;
 }
 
 // Helper to clear user session

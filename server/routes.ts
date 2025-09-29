@@ -98,13 +98,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      console.log('👤 Auth check - Session ID:', req.session?.userId || 'No session');
-      console.log('👤 Auth check - User claims:', req.user?.claims?.sub || 'No user claims');
-
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
-
-      console.log('👤 Found user:', user ? `${user.email} (${user.id})` : 'No user found');
 
       // Update last login
       if (user) {
@@ -120,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(user);
     } catch (error) {
-      console.error("💥 Error fetching user:", error);
+      console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
@@ -138,40 +133,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/auth/login', async (req: any, res) => {
     try {
-      console.log('🔐 Login attempt for:', req.body.email);
-      console.log('🍪 Session before login:', req.session?.userId || 'No session');
-      console.log('🌐 Environment:', process.env.NODE_ENV);
-      console.log('🔒 Cookie settings:', {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        sameSite: 'lax'
-      });
-
       const { email, password } = req.body;
       const result = await AuthService.loginUser({ email, password });
 
       if (result.success && result.user) {
         // Set session for authenticated user
-        await setUserSession(req, result.user.id);
-        console.log('✅ Session set for user:', result.user.id);
-
-        // Force session save and check headers
-        req.session.save((err) => {
-          if (err) {
-            console.error('💥 Session save error:', err);
-          } else {
-            console.log('✅ Session saved to store');
-          }
-
-          const allHeaders = res.getHeaders();
-          console.log('🍪 ALL response headers:', allHeaders);
-          console.log('🍪 Set-Cookie header specifically:', allHeaders['set-cookie']);
-
-          console.log('📤 Sending success response');
-          res.json(result);
-        });
+        setUserSession(req, result.user.id);
+        res.json(result);
       } else {
-        console.log('❌ Login failed:', result.message);
         res.status(401).json(result);
       }
     } catch (error) {
