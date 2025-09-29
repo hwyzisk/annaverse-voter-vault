@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Check, X, LogOut } from "lucide-react";
 import type { User } from "@shared/schema";
 
 interface UserProfileModalProps {
@@ -116,23 +117,39 @@ export default function UserProfileModal({ user, isOpen, onClose }: UserProfileM
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">View Contacts</span>
-                  <i className="fas fa-check text-green-500"></i>
+                  <Check className="h-4 w-4 text-green-500" />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Edit Contact Details</span>
-                  <i className={`fas ${user.role !== 'viewer' ? 'fa-check text-green-500' : 'fa-times text-red-500'}`}></i>
+                  {user.role !== 'viewer' ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <X className="h-4 w-4 text-red-500" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Admin Dashboard</span>
-                  <i className={`fas ${user.role === 'admin' ? 'fa-check text-green-500' : 'fa-times text-red-500'}`}></i>
+                  {user.role === 'admin' ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <X className="h-4 w-4 text-red-500" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Import Data</span>
-                  <i className={`fas ${user.role === 'admin' ? 'fa-check text-green-500' : 'fa-times text-red-500'}`}></i>
+                  {user.role === 'admin' ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <X className="h-4 w-4 text-red-500" />
+                  )}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">User Management</span>
-                  <i className={`fas ${user.role === 'admin' ? 'fa-check text-green-500' : 'fa-times text-red-500'}`}></i>
+                  {user.role === 'admin' ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <X className="h-4 w-4 text-red-500" />
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -146,7 +163,7 @@ export default function UserProfileModal({ user, isOpen, onClose }: UserProfileM
               Close
             </Button>
             <Button variant="destructive" onClick={handleLogout} data-testid="button-logout-profile">
-              <i className="fas fa-sign-out-alt mr-2"></i>
+              <LogOut className="h-4 w-4 mr-2" />
               Sign Out
             </Button>
           </div>

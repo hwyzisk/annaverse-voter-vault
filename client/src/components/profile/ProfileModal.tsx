@@ -498,9 +498,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   <h2 className="text-lg font-semibold truncate" data-testid="text-contact-name">
                     {details.fullName}
                   </h2>
-                  <p className="text-sm text-muted-foreground truncate">
-                    ID: {details.systemId}
-                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -1274,7 +1271,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     {details.fullName}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    ID: <span data-testid="text-system-id">{details.systemId}</span> • Last updated{" "}
+                    Last updated{" "}
                     <span data-testid="text-last-updated">
                       {details.updatedAt ? new Date(details.updatedAt).toLocaleDateString() : 'Never'}
                     </span>

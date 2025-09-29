@@ -144,33 +144,35 @@ Warmly,
   const handleEmailSend = (subject: string, body: string) => {
     const mailtoLink = createMailtoLink(subject, body);
 
-    try {
-      // Method 1: Try window.open
-      const emailWindow = window.open(mailtoLink, '_self');
+    // For Gmail users, try Gmail compose URL
+    const gmailComposeUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-      // Method 2: If that doesn't work, try creating and clicking a link
-      if (!emailWindow) {
-        const link = document.createElement('a');
-        link.href = mailtoLink;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    try {
+      // Method 1: Try Gmail compose (works well in Chrome)
+      const gmailWindow = window.open(gmailComposeUrl, '_blank');
+
+      // Method 2: If Gmail doesn't open, try mailto
+      if (!gmailWindow) {
+        window.location.href = mailtoLink;
       }
 
       // Show helpful toast
       toast({
         title: "Opening Email Client",
-        description: "Your default email client should open with the message pre-filled. If it doesn't work, try the 'Copy Email' button instead.",
+        description: "Opening Gmail compose window. If it doesn't work, try the 'Copy Email' button instead.",
       });
 
     } catch (error) {
-      // Fallback: Show toast with instructions
-      toast({
-        title: "Email Client Not Available",
-        description: "Please use the 'Copy Email' button to copy the message and paste it into your email client.",
-        variant: "destructive",
-      });
+      // Method 3: Final fallback - try direct mailto
+      try {
+        window.location.href = mailtoLink;
+      } catch (e) {
+        toast({
+          title: "Email Client Not Available",
+          description: "Please use the 'Copy Email' button to copy the message and paste it into your email client.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
