@@ -83,6 +83,34 @@ export default function UserManagement({ user }: UserManagementProps) {
     },
   });
 
+  const approveUserMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      await apiRequest('POST', `/api/admin/approve-user/${userId}`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/users'] });
+      toast({ title: "User approved successfully" });
+    },
+    onError: (error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to approve user",
+        variant: "destructive",
+      });
+    },
+  });
+
   const formatUserName = (user: User) => {
     if (user.firstName && user.lastName) {
       return `${user.firstName} ${user.lastName}`;
@@ -105,10 +133,26 @@ export default function UserManagement({ user }: UserManagementProps) {
     }
   };
 
-  const getStatusBadgeColor = (isActive: boolean) => {
-    return isActive 
+  const getStatusBadgeColor = (status: string, isActive: boolean) => {
+    if (status === 'pending') {
+      return 'bg-yellow-100 text-yellow-800';
+    }
+    if (status === 'rejected') {
+      return 'bg-red-100 text-red-800';
+    }
+    // For approved users, show based on isActive
+    return isActive
       ? 'bg-green-100 text-green-800'
-      : 'bg-red-100 text-red-800';
+      : 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusText = (status: string, isActive: boolean) => {
+    if (status === 'pending') return 'Pending Approval';
+    if (status === 'rejected') return 'Rejected';
+    if (status === 'approved') {
+      return isActive ? 'Active' : 'Suspended';
+    }
+    return 'Unknown';
   };
 
   const handleInviteUser = () => {
@@ -205,6 +249,7 @@ export default function UserManagement({ user }: UserManagementProps) {
                 <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">User</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Role</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Last Login</th>
+                <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Approval</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Status</th>
                 <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -239,7 +284,7 @@ export default function UserManagement({ user }: UserManagementProps) {
                     <Select
                       value={userItem.role}
                       onValueChange={(role) => updateRoleMutation.mutate({ userId: userItem.id, role })}
-                      disabled={userItem.id === user.id} // Can't change own role
+                      disabled={userItem.id === user.id || userItem.status !== 'approved'} // Can't change own role or pending/rejected users
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
@@ -258,27 +303,52 @@ export default function UserManagement({ user }: UserManagementProps) {
                     }
                   </td>
                   <td className="px-4 py-4">
-                    <Badge 
-                      className={getStatusBadgeColor(userItem.isActive)}
+                    <Badge
+                      className={getStatusBadgeColor(userItem.status, userItem.isActive)}
+                      data-testid={`badge-approval-${userItem.id}`}
+                    >
+                      {userItem.status === 'pending' ? 'Pending' : userItem.status === 'rejected' ? 'Rejected' : 'Approved'}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-4">
+                    <Badge
+                      className={getStatusBadgeColor(userItem.status, userItem.isActive)}
                       data-testid={`badge-status-${userItem.id}`}
                     >
-                      {userItem.isActive ? 'Active' : 'Suspended'}
+                      {getStatusText(userItem.status, userItem.isActive)}
                     </Badge>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => updateStatusMutation.mutate({ 
-                          userId: userItem.id, 
-                          isActive: !userItem.isActive 
-                        })}
-                        disabled={userItem.id === user.id || updateStatusMutation.isPending}
-                        data-testid={`button-toggle-status-${userItem.id}`}
-                      >
-                        <i className={`fas ${userItem.isActive ? 'fa-ban' : 'fa-check'} text-xs`}></i>
-                      </Button>
+                      {userItem.status === 'pending' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => approveUserMutation.mutate({
+                            userId: userItem.id,
+                            role: userItem.role
+                          })}
+                          disabled={userItem.id === user.id || approveUserMutation.isPending}
+                          data-testid={`button-approve-user-${userItem.id}`}
+                          title="Approve user and send approval email"
+                        >
+                          <i className="fas fa-check text-xs text-green-600"></i>
+                        </Button>
+                      ) : userItem.status === 'approved' ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => updateStatusMutation.mutate({
+                            userId: userItem.id,
+                            isActive: !userItem.isActive
+                          })}
+                          disabled={userItem.id === user.id || updateStatusMutation.isPending}
+                          data-testid={`button-toggle-status-${userItem.id}`}
+                          title={userItem.isActive ? 'Suspend user' : 'Activate user'}
+                        >
+                          <i className={`fas ${userItem.isActive ? 'fa-ban' : 'fa-check'} text-xs`}></i>
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="sm"
