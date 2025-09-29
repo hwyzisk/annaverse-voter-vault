@@ -7,6 +7,17 @@ const PgSession = connectPg(session);
 
 export async function setupAuth(app: Express) {
   // Session configuration
+  const cookieConfig = {
+    secure: process.env.NODE_ENV === 'production', // Secure cookies in production with HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax' as const, // Help prevent CSRF while allowing normal navigation
+    domain: process.env.NODE_ENV === 'production' ? '.annaverseapp.com' : undefined, // Set domain for production (with dot for subdomains)
+    path: '/' // Ensure cookie is available for all paths
+  };
+
+  console.log('🍪 Session cookie configuration:', cookieConfig);
+
   app.use(session({
     store: new PgSession({
       pool: pool,
@@ -16,12 +27,7 @@ export async function setupAuth(app: Express) {
     secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev',
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production', // Secure cookies in production with HTTPS
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-      sameSite: 'lax' // Help prevent CSRF while allowing normal navigation
-    }
+    cookie: cookieConfig
   }));
 }
 
