@@ -400,15 +400,15 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
   }, []);
 
   const content = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col min-h-full">
       {/* Header */}
       <div className="bg-card border-b border-border px-6 py-4 pr-12">
         <div className="flex items-center justify-between pr-2">
           <div className="flex items-center space-x-4">
             {!isFullPage && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={onClose}
                 data-testid="button-close-admin"
               >
@@ -421,8 +421,8 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
             <span className="text-sm text-muted-foreground">
               System Status: <Badge variant="secondary" className="bg-green-100 text-green-800">Operational</Badge>
             </span>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={handleDatabaseExport}
               data-testid="button-export-data"
@@ -434,7 +434,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1">
         <div className="p-6">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
             {/* System Stats Cards */}
@@ -529,7 +529,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                       <p className="mt-2 text-muted-foreground">Loading users...</p>
                     </div>
                   ) : (
-                    <div className="max-h-96 overflow-auto">
+                    <div className="max-h-[50vh] min-h-96 overflow-auto">
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader className="sticky top-0 bg-background border-b z-10">
@@ -788,7 +788,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                       <p className="mt-2 text-muted-foreground">Loading audit logs...</p>
                     </div>
                   ) : auditLogs && auditLogs.length > 0 ? (
-                    <div className="max-h-96 overflow-auto">
+                    <div className="max-h-[40vh] min-h-80 overflow-auto">
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader className="sticky top-0 bg-background border-b z-10">
@@ -1155,6 +1155,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
   // Mobile Sheet Layout
   if (isMobile) {
     return (
+      <>
       <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
         <SheetContent className="w-full sm:max-w-none p-0 overflow-hidden flex flex-col">
           <SheetHeader className="sr-only">
@@ -1306,62 +1307,78 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
                               </div>
                               
                               {/* Action Buttons */}
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="default"
-                                  onClick={() => setEditingUser(userItem)}
-                                  disabled={editingUser?.id === userItem.id}
-                                  className="flex-1 h-11"
-                                  data-testid={`button-edit-user-${userItem.id}`}
-                                >
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit Role
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="default"
-                                  onClick={() => updateUserStatusMutation.mutate({
-                                    userId: userItem.id,
-                                    isActive: !userItem.isActive
-                                  })}
-                                  disabled={updateUserStatusMutation.isPending || userItem.id === user?.id}
-                                  className="flex-1 h-11"
-                                  data-testid={`button-toggle-status-${userItem.id}`}
-                                >
-                                  {userItem.isActive ? 'Deactivate' : 'Activate'}
-                                </Button>
-                                {userItem.id !== user?.id && (
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        variant="destructive"
-                                        size="default"
-                                        className="h-11 w-11 p-0"
-                                        data-testid={`button-delete-user-${userItem.id}`}
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to delete this user? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => deleteUserMutation.mutate(userItem.id)}
-                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              <div className="space-y-2">
+                                {/* Primary Actions Row */}
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="default"
+                                    onClick={() => setSelectedUserProfile(userItem)}
+                                    className="flex-1 h-11"
+                                    data-testid={`button-view-profile-${userItem.id}`}
+                                  >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    View Profile
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="default"
+                                    onClick={() => setEditingUser(userItem)}
+                                    disabled={editingUser?.id === userItem.id}
+                                    className="flex-1 h-11"
+                                    data-testid={`button-edit-user-${userItem.id}`}
+                                  >
+                                    <Edit className="w-4 h-4 mr-2" />
+                                    Edit Role
+                                  </Button>
+                                </div>
+                                {/* Secondary Actions Row */}
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="default"
+                                    onClick={() => updateUserStatusMutation.mutate({
+                                      userId: userItem.id,
+                                      isActive: !userItem.isActive
+                                    })}
+                                    disabled={updateUserStatusMutation.isPending || userItem.id === user?.id}
+                                    className="flex-1 h-11"
+                                    data-testid={`button-toggle-status-${userItem.id}`}
+                                  >
+                                    {userItem.isActive ? 'Deactivate' : 'Activate'}
+                                  </Button>
+                                  {userItem.id !== user?.id && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="destructive"
+                                          size="default"
+                                          className="h-11 w-11 p-0"
+                                          data-testid={`button-delete-user-${userItem.id}`}
                                         >
-                                          Delete
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                )}
+                                          <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this user? This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => deleteUserMutation.mutate(userItem.id)}
+                                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                </div>
                               </div>
                               
                               {/* Role Editing */}
@@ -1685,13 +1702,22 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* User Profile Modal for Mobile */}
+      <UserProfileModal
+        user={selectedUserProfile}
+        isOpen={!!selectedUserProfile}
+        onClose={() => setSelectedUserProfile(null)}
+        currentUser={user}
+      />
+    </>
     );
   }
 
   // Desktop Dialog Layout
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden p-0">
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto p-0">
         <DialogTitle className="sr-only">Admin Dashboard</DialogTitle>
         <DialogDescription className="sr-only">Administrative controls and system management</DialogDescription>
         {content}
