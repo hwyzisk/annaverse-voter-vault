@@ -152,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (result.success && result.user) {
         // Set session for authenticated user
-        setUserSession(req, result.user.id);
+        await setUserSession(req, result.user.id);
         console.log('✅ Session set for user:', result.user.id);
 
         // Force session save and check headers

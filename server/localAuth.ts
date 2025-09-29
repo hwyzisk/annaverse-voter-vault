@@ -65,13 +65,25 @@ export function isAuthenticated(req: any, res: any, next: any) {
 // Helper to set user session
 export function setUserSession(req: any, userId: string) {
   console.log('💾 Setting session for user:', userId);
-  console.log('💾 Session ID:', req.session?.id || 'No session ID');
+  console.log('💾 Old session ID:', req.session?.id || 'No session ID');
 
-  // Mark session as modified to force cookie to be sent
-  req.session.touch();
-  req.session.userId = userId;
+  // Destroy existing session and create new one
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err: any) => {
+      if (err) {
+        console.error('💥 Session regenerate error:', err);
+        // If regenerate fails, try normal assignment
+        req.session.userId = userId;
+        resolve(true);
+        return;
+      }
 
-  console.log('💾 Session after setting userId:', req.session?.userId);
+      console.log('🔄 Session regenerated, new ID:', req.session?.id);
+      req.session.userId = userId;
+      console.log('💾 Session after setting userId:', req.session?.userId);
+      resolve(true);
+    });
+  });
 }
 
 // Helper to clear user session
