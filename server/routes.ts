@@ -242,6 +242,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Backward compatibility endpoint for production frontend
+  app.patch('/api/admin/users/:id/approve', isAuthenticated, requireRole(['admin']), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+      const result = await AuthService.approveUser(id, role || 'editor'); // Default to editor if no role provided
+      res.json(result);
+    } catch (error) {
+      console.error('Error approving user (backward compatibility):', error);
+      res.status(500).json({ success: false, message: 'Failed to approve user' });
+    }
+  });
+
   app.post('/api/admin/reject-user/:id', isAuthenticated, requireRole(['admin']), async (req, res) => {
     try {
       const { id } = req.params;
