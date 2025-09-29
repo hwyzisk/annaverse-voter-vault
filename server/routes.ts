@@ -154,8 +154,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set session for authenticated user
         setUserSession(req, result.user.id);
         console.log('✅ Session set for user:', result.user.id);
-        console.log('📤 Sending success response');
-        res.json(result);
+
+        // Force a delay to let express-session set the header
+        setTimeout(() => {
+          const setCookie = res.getHeaders()['set-cookie'];
+          console.log('🍪 ACTUAL Set-Cookie header being sent:', setCookie);
+          console.log('📤 Sending success response');
+          res.json(result);
+        }, 10);
       } else {
         console.log('❌ Login failed:', result.message);
         res.status(401).json(result);
