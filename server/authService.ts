@@ -155,17 +155,13 @@ export class AuthService {
         return { success: false, message: 'User not found' };
       }
 
-      // Update user status and role
-      await storage.upsertUser({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        status: 'approved',
-        role,
-        isActive: true,
-        updatedAt: new Date(),
-      });
+      // Update user status to approved (this automatically sets isActive = true)
+      await storage.updateUserStatus(userId, 'approved');
+
+      // Update user role if different from current role
+      if (user.role !== role) {
+        await storage.updateUserRole(userId, role);
+      }
 
       // Send approval email
       const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User';
@@ -188,15 +184,8 @@ export class AuthService {
         return { success: false, message: 'User not found' };
       }
 
-      // Update user status
-      await storage.upsertUser({
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        status: 'rejected',
-        updatedAt: new Date(),
-      });
+      // Update user status to rejected
+      await storage.updateUserStatus(userId, 'rejected');
 
       // Send rejection email
       const userFullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User';
