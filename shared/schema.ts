@@ -290,10 +290,21 @@ export const clientInsertContactEmailSchema = insertContactEmailSchema.omit({
 
 // Registration schema for user signup (excludes auto-generated fields)
 export const registrationSchema = z.object({
-  email: z.string().trim().min(1, "Email is required").email("Please enter a valid email address"),
+  email: z.string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Please enter a valid email address")
+    .regex(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, "Please enter a valid email address with proper domain"),
   firstName: z.string().trim().min(1, "First name is required"),
   lastName: z.string().trim().min(1, "Last name is required"),
-  phone: z.string().trim().min(1, "Phone number is required"),
+  phone: z.string()
+    .trim()
+    .min(1, "Phone number is required")
+    .refine((phone) => {
+      // Remove all non-numeric characters and check if it's exactly 10 digits
+      const numericPhone = phone.replace(/\D/g, '');
+      return numericPhone.length === 10;
+    }, "Please enter a valid 10-digit phone number"),
   address: z.string().trim().min(1, "Address is required"),
   city: z.string().trim().min(1, "City is required"),
   state: z.string().trim().min(1, "State is required"),

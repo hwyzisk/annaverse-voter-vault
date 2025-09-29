@@ -9,7 +9,7 @@ import UserProfileModal from "@/components/profile/UserProfileModal";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Vote, Search, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { Vote, Search, Settings, LogOut, User as UserIcon, Heart, TrendingUp } from "lucide-react";
 import type { Contact } from "@shared/schema";
 
 export default function HomeFull() {
@@ -66,6 +66,41 @@ export default function HomeFull() {
               </SheetTitle>
             </SheetHeader>
             <div className="mt-6 space-y-4">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  window.location.href = '/';
+                  setShowMobileNav(false);
+                }}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                Search Contacts
+              </Button>
+              {(user.role === 'admin' || user.role === 'editor') && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => {
+                    window.location.href = '/network';
+                    setShowMobileNav(false);
+                  }}
+                >
+                  <Heart className="mr-2 h-4 w-4" />
+                  My Network
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  window.location.href = '/our-impact';
+                  setShowMobileNav(false);
+                }}
+              >
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Our Impact
+              </Button>
               <Button
                 variant="ghost"
                 className="w-full justify-start"

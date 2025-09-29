@@ -125,6 +125,62 @@ export default function Network() {
     );
   };
 
+  const getSupporterStatusBadge = (supporterStatus?: string | null) => {
+    if (!supporterStatus || supporterStatus === 'unknown') return null;
+
+    const statusConfig = {
+      'confirmed-supporter': {
+        label: 'Confirmed Supporter',
+        className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+      },
+      'likely-supporter': {
+        label: 'Likely Supporter',
+        className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+      },
+      'opposition': {
+        label: 'Opposition',
+        className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+      }
+    };
+
+    const config = statusConfig[supporterStatus as keyof typeof statusConfig];
+    if (!config) return null;
+
+    return (
+      <Badge className={`text-xs ${config.className}`}>
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const getVolunteerLikelinessBadge = (volunteerLikeliness?: string | null) => {
+    if (!volunteerLikeliness || volunteerLikeliness === 'unknown') return null;
+
+    const statusConfig = {
+      'confirmed-volunteer': {
+        label: 'Confirmed Volunteer',
+        className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300'
+      },
+      'likely-to-volunteer': {
+        label: 'Likely to Volunteer',
+        className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300'
+      },
+      'will-not-volunteer': {
+        label: 'Will Not Volunteer',
+        className: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+      }
+    };
+
+    const config = statusConfig[volunteerLikeliness as keyof typeof statusConfig];
+    if (!config) return null;
+
+    return (
+      <Badge className={`text-xs ${config.className}`}>
+        {config.label}
+      </Badge>
+    );
+  };
+
   const calculateAge = (dateOfBirth?: string | null) => {
     if (!dateOfBirth) return null;
 
@@ -229,7 +285,7 @@ export default function Network() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {networkContacts.filter(n => n.contact.volunteerStatus === 'confirmed').length}
+                    {networkContacts.filter(n => n.contact.volunteerLikeliness === 'confirmed-volunteer').length}
                   </div>
                 </CardContent>
               </Card>
@@ -284,9 +340,18 @@ export default function Network() {
                             {getPartyBadge(network.contact.party)}
                           </div>
 
+                          {/* Status badges */}
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {getSupporterStatusBadge(network.contact.supporterStatus)}
+                            {getVolunteerLikelinessBadge(network.contact.volunteerLikeliness)}
+                          </div>
+
                           <div className="text-sm text-muted-foreground">
                             {calculateAge(network.contact.dateOfBirth) && (
                               <span>Age: {calculateAge(network.contact.dateOfBirth)}</span>
+                            )}
+                            {network.contact.city && (
+                              <span>{calculateAge(network.contact.dateOfBirth) ? ' • ' : ''}City: {network.contact.city}</span>
                             )}
                           </div>
                         </div>

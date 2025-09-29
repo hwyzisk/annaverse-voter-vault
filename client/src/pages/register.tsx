@@ -13,8 +13,40 @@ import { registrationSchema, type RegistrationData } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { UserPlus, CheckCircle, AlertCircle } from "lucide-react";
 
+// Helper functions for phone and email validation
+const formatPhoneNumber = (value: string) => {
+  // Remove all non-numeric characters
+  const numericValue = value.replace(/\D/g, '');
+
+  // Apply formatting based on length
+  if (numericValue.length <= 3) {
+    return numericValue;
+  } else if (numericValue.length <= 6) {
+    return `(${numericValue.slice(0, 3)}) ${numericValue.slice(3)}`;
+  } else if (numericValue.length <= 10) {
+    return `(${numericValue.slice(0, 3)}) ${numericValue.slice(3, 6)}-${numericValue.slice(6)}`;
+  } else {
+    // Limit to 10 digits for US phone numbers
+    return `(${numericValue.slice(0, 3)}) ${numericValue.slice(3, 6)}-${numericValue.slice(6, 10)}`;
+  }
+};
+
+const isValidEmail = (email: string) => {
+  // More comprehensive email validation
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return email.trim().length > 0 && emailRegex.test(email.trim());
+};
+
+const isValidPhoneNumber = (phone: string) => {
+  // Must be at least 10 digits for a valid US phone number
+  const numericValue = phone.replace(/\D/g, '');
+  return numericValue.length === 10;
+};
+
 export default function RegisterPage() {
   const [registrationComplete, setRegistrationComplete] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const { toast } = useToast();
 
   const form = useForm<RegistrationData>({
@@ -70,6 +102,9 @@ export default function RegisterPage() {
   });
 
   const onSubmit = (data: RegistrationData) => {
+    // Clear any validation errors before submitting
+    setPhoneError("");
+    setEmailError("");
     registerMutation.mutate(data);
   };
 
@@ -177,14 +212,27 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Email Address *</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="email" 
-                        placeholder="Enter your email address" 
+                      <Input
+                        type="email"
+                        placeholder="Enter your email address"
                         data-testid="input-email"
                         {...field}
                         value={field.value || ""}
+                        onChange={(e) => {
+                          const email = e.target.value;
+                          field.onChange(email);
+                          if (email && !isValidEmail(email)) {
+                            setEmailError("Please enter a valid email address with @ and proper domain");
+                          } else {
+                            setEmailError("");
+                          }
+                        }}
+                        className={emailError ? 'border-red-500' : ''}
                       />
                     </FormControl>
+                    {emailError && (
+                      <p className="text-sm text-red-500">{emailError}</p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -197,14 +245,27 @@ export default function RegisterPage() {
                   <FormItem>
                     <FormLabel>Phone Number *</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="tel" 
-                        placeholder="(555) 123-4567" 
+                      <Input
+                        type="tel"
+                        placeholder="(555) 123-4567"
                         data-testid="input-phone"
                         {...field}
                         value={field.value || ""}
+                        onChange={(e) => {
+                          const formatted = formatPhoneNumber(e.target.value);
+                          field.onChange(formatted);
+                          if (formatted && !isValidPhoneNumber(formatted)) {
+                            setPhoneError("Please enter a valid 10-digit phone number");
+                          } else {
+                            setPhoneError("");
+                          }
+                        }}
+                        className={phoneError ? 'border-red-500' : ''}
                       />
                     </FormControl>
+                    {phoneError && (
+                      <p className="text-sm text-red-500">{phoneError}</p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

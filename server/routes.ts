@@ -672,6 +672,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Single contact export endpoint
+  app.get('/api/contacts/:id/export', isAuthenticated, requireRole(['admin', 'editor', 'viewer']), async (req: any, res) => {
+    try {
+      const contactId = req.params.id;
+      console.log(`Contact export initiated by user: ${req.currentUser.email} for contact: ${contactId}`);
+
+      // Get the specific contact with all related data (same pattern as existing contact endpoint)
+      const contact = await storage.getContact(contactId);
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+
+      // Get related data
+      const [phones, emails] = await Promise.all([
+        storage.getContactPhones(contact.id),
+        storage.getContactEmails(contact.id),
+      ]);
+
+      // Format the data in the same structure as getAllContactsForExport
+      const contactWithRelations = {
+        ...contact,
+        phones: phones,
+        emails: emails,
+      };
+
+      console.log(`📊 Exporting contact data:`, { contactId, name: contact.fullName, phoneCount: phones.length, emailCount: emails.length });
+
+      // Create a simple CSV export instead of Excel for now to debug
+      const csvData = generateSimpleCSV([contactWithRelations]);
+
+      // Set response headers for CSV file download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="contact_${contact.systemId || contact.id}_export.csv"`);
+
+      res.send(csvData);
+
+      console.log(`✅ Contact export completed by user: ${req.currentUser.email} for contact: ${contactId}`);
+
+    } catch (error) {
+      console.error("Error exporting contact:", error);
+      res.status(500).json({
+        message: "Failed to export contact",
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Simple CSV generator function
+  function generateSimpleCSV(contacts: any[]): string {
+    if (!contacts || contacts.length === 0) {
+      return "No data to export";
+    }
+
+    const headers = ['ID', 'System ID', 'Full Name', 'First Name', 'Last Name', 'Phone Numbers', 'Email Addresses', 'City', 'State', 'Party'];
+    const rows = contacts.map(contact => [
+      contact.id || '',
+      contact.systemId || '',
+      contact.fullName || '',
+      contact.firstName || '',
+      contact.lastName || '',
+      contact.phones?.map((p: any) => p.phoneNumber).join('; ') || '',
+      contact.emails?.map((e: any) => e.email).join('; ') || '',
+      contact.city || '',
+      contact.state || '',
+      contact.party || ''
+    ]);
+
+    return [headers, ...rows].map(row =>
+      row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+  }
+
   // Progress tracking for active uploads
   const activeUploads = new Map<string, any>();
 

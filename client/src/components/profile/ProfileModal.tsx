@@ -63,7 +63,8 @@ const isValidPhoneNumber = (phone: string) => {
 };
 
 export default function ProfileModal({ contact, user, isOpen, onClose }: ProfileModalProps) {
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingCampaign, setIsEditingCampaign] = useState(false);
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
   const isMobile = useIsMobile();
   const [notes, setNotes] = useState(contact.notes || "");
   const [supporterStatus, setSupporterStatus] = useState(contact.supporterStatus ?? "unknown");
@@ -89,17 +90,20 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     setSupporterStatus(contact.supporterStatus ?? "unknown");
     setVolunteerLikeliness(contact.volunteerLikeliness ?? "unknown");
     setNotes(contact.notes || "");
-    setIsEditing(false);
+    setIsEditingCampaign(false);
+    setIsEditingNotes(false);
   }, [contact.id]);
 
   // Update state when contact data changes externally (but not while editing)
   useEffect(() => {
-    if (!isEditing) {
+    if (!isEditingCampaign) {
       setSupporterStatus(contact.supporterStatus ?? "unknown");
       setVolunteerLikeliness(contact.volunteerLikeliness ?? "unknown");
+    }
+    if (!isEditingNotes) {
       setNotes(contact.notes || "");
     }
-  }, [contact.supporterStatus, contact.volunteerLikeliness, contact.notes]);
+  }, [contact.supporterStatus, contact.volunteerLikeliness, contact.notes, isEditingCampaign, isEditingNotes]);
 
   // Check network status when modal opens or contact changes
   useEffect(() => {
@@ -171,6 +175,50 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     }
   };
 
+  const handleExportContact = async () => {
+    try {
+      console.log('🔄 Starting contact export for:', contact.id);
+      const response = await fetch(`/api/contacts/${contact.id}/export`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      console.log('📥 Export response:', response.status, response.headers.get('content-type'));
+
+      if (response.ok) {
+        // Get the filename from the Content-Disposition header
+        const contentDisposition = response.headers.get('Content-Disposition');
+        const filename = contentDisposition
+          ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+          : `contact_${contact.systemId || contact.id}_export.csv`;
+
+        // Create blob and download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast({
+          title: "Export successful",
+          description: `Contact data for ${contact.fullName} has been downloaded.`,
+        });
+      } else {
+        throw new Error('Export failed');
+      }
+    } catch (error) {
+      console.error('Error exporting contact:', error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export contact data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const { data: contactDetails, isLoading } = useQuery<ContactDetails>({
     queryKey: ['/api/contacts', contact.id],
     enabled: isOpen,
@@ -184,7 +232,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
       queryClient.invalidateQueries({ queryKey: ['/api/contacts', contact.id] });
       queryClient.invalidateQueries({ queryKey: ['/api/contacts/search'] });
       toast({ title: "Contact updated successfully" });
-      setIsEditing(false);
+      setIsEditingCampaign(false);
+      setIsEditingNotes(false);
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {
@@ -316,17 +365,13 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
 
   // Alias functionality removed
 
-  const handleSave = () => {
+  const handleSaveCampaign = () => {
     const updates: any = {};
-    
-    if (notes !== contact.notes) {
-      updates.notes = notes;
-    }
-    
+
     if (supporterStatus !== contact.supporterStatus) {
       updates.supporterStatus = supporterStatus;
     }
-    
+
     if (volunteerLikeliness !== contact.volunteerLikeliness) {
       updates.volunteerLikeliness = volunteerLikeliness;
     }
@@ -334,7 +379,21 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     if (Object.keys(updates).length > 0) {
       updateContactMutation.mutate(updates);
     } else {
-      setIsEditing(false);
+      setIsEditingCampaign(false);
+    }
+  };
+
+  const handleSaveNotes = () => {
+    const updates: any = {};
+
+    if (notes !== contact.notes) {
+      updates.notes = notes;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateContactMutation.mutate(updates);
+    } else {
+      setIsEditingNotes(false);
     }
   };
 
@@ -451,7 +510,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     size="default"
                     onClick={toggleNetwork}
                     disabled={networkLoading}
-                    className="h-11 px-3"
+                    className="h-11 px-3 shadow-sm border-gray-300 hover:border-gray-400 hover:shadow-md transition-all"
                     data-testid="button-network-toggle"
                   >
                     {networkLoading ? (
@@ -461,17 +520,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     ) : (
                       <Heart className="w-4 h-4" />
                     )}
-                  </Button>
-                )}
-                {canEdit && (
-                  <Button
-                    size="default"
-                    onClick={isEditing ? handleSave : () => setIsEditing(true)}
-                    className="h-11 px-4"
-                    data-testid="button-edit"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    {isEditing ? 'Save' : 'Edit'}
                   </Button>
                 )}
               </div>
@@ -484,13 +532,34 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
               {/* Campaign Status Section */}
               <AccordionItem value="status">
                 <AccordionTrigger className="h-12 text-base font-medium">
-                  Campaign Status
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <span>Campaign Status</span>
+                    {canEdit && (
+                      <Button
+                        variant={isEditingCampaign ? "default" : "outline"}
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isEditingCampaign) {
+                            handleSaveCampaign();
+                          } else {
+                            setIsEditingCampaign(true);
+                          }
+                        }}
+                        className="h-8 px-2 shadow-sm border-gray-300 hover:border-gray-400 hover:shadow-md transition-all"
+                        data-testid="button-edit-campaign"
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        {isEditingCampaign ? 'Save' : 'Edit'}
+                      </Button>
+                    )}
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-6">
                   {/* Supporter Status */}
                   <div className="mb-4">
                     <Label className="text-base font-medium mb-3 block">Supporter Status</Label>
-                    {canEdit && isEditing ? (
+                    {canEdit && isEditingCampaign ? (
                       <RadioGroup
                         value={supporterStatus}
                         onValueChange={(value) => setSupporterStatus(value as any)}
@@ -544,7 +613,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   {/* Volunteer Likeliness */}
                   <div className="mb-4">
                     <Label className="text-base font-medium mb-3 block">Likeliness to Volunteer</Label>
-                    {canEdit && isEditing ? (
+                    {canEdit && isEditingCampaign ? (
                       <RadioGroup
                         value={volunteerLikeliness}
                         onValueChange={(value) => setVolunteerLikeliness(value as any)}
@@ -755,7 +824,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               <select 
                                 value={editingPhone.phoneType}
                                 onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneType: e.target.value } : null)}
-                                className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                                className="w-full px-3 py-3 border border-input rounded-md h-11 text-base bg-background text-foreground"
                               >
                                 <option value="mobile">Mobile</option>
                                 <option value="home">Home</option>
@@ -867,7 +936,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                           <select
                             value={newPhone.phoneType}
                             onChange={(e) => setNewPhone(prev => ({ ...prev, phoneType: e.target.value as any }))}
-                            className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                            className="w-full px-3 py-3 border border-input rounded-md h-11 text-base bg-background text-foreground"
                           >
                             <option value="mobile">Mobile</option>
                             <option value="home">Home</option>
@@ -905,7 +974,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               <select 
                                 value={editingEmail.emailType}
                                 onChange={(e) => setEditingEmail(prev => prev ? { ...prev, emailType: e.target.value } : null)}
-                                className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                                className="w-full px-3 py-3 border border-input rounded-md h-11 text-base bg-background text-foreground"
                               >
                                 <option value="personal">Personal</option>
                                 <option value="work">Work</option>
@@ -1016,7 +1085,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                           <select
                             value={newEmail.emailType}
                             onChange={(e) => setNewEmail(prev => ({ ...prev, emailType: e.target.value as any }))}
-                            className="w-full px-3 py-3 border border-input rounded-md h-11 text-base"
+                            className="w-full px-3 py-3 border border-input rounded-md h-11 text-base bg-background text-foreground"
                           >
                             <option value="personal">Personal</option>
                             <option value="work">Work</option>
@@ -1042,13 +1111,36 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
               {/* Notes Section */}
               <AccordionItem value="notes">
                 <AccordionTrigger className="h-12 text-base font-medium">
-                  Notes
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {notes.length}/500
-                  </span>
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <div className="flex items-center gap-2">
+                      <span>Notes</span>
+                      <span className="text-xs text-muted-foreground">
+                        {notes.length}/500
+                      </span>
+                    </div>
+                    {canEdit && (
+                      <Button
+                        variant={isEditingNotes ? "default" : "outline"}
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isEditingNotes) {
+                            handleSaveNotes();
+                          } else {
+                            setIsEditingNotes(true);
+                          }
+                        }}
+                        className="h-8 px-2 shadow-sm border-gray-300 hover:border-gray-400 hover:shadow-md transition-all"
+                        data-testid="button-edit-notes"
+                      >
+                        <Edit className="w-3 h-3 mr-1" />
+                        {isEditingNotes ? 'Save' : 'Edit'}
+                      </Button>
+                    )}
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent className="pb-6">
-                  {isEditing && canEdit ? (
+                  {isEditingNotes && canEdit ? (
                     <Textarea
                       value={notes}
                       onChange={(e) => setNotes(e.target.value.slice(0, 500))}
@@ -1153,20 +1245,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
             </Accordion>
           </div>
 
-          {/* Mobile Sticky Footer */}
-          {isEditing && canEdit && (
-            <SheetFooter className="sticky bottom-0 bg-background border-t border-border p-4">
-              <Button
-                onClick={handleSave}
-                disabled={updateContactMutation.isPending}
-                size="default"
-                className="w-full h-12 text-base"
-                data-testid="button-save"
-              >
-                {updateContactMutation.isPending ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </SheetFooter>
-          )}
         </SheetContent>
       </Sheet>
     );
@@ -1207,6 +1285,8 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={handleExportContact}
+                  className="shadow-sm border-gray-300 hover:border-gray-400 hover:shadow-md transition-all"
                   data-testid="button-export"
                 >
                   <Download className="w-4 h-4 mr-2" />Export
@@ -1217,7 +1297,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     size="sm"
                     onClick={toggleNetwork}
                     disabled={networkLoading}
-                    className={networkStatus.inNetwork ? "text-destructive hover:text-destructive" : ""}
+                    className={`shadow-sm border-gray-300 hover:border-gray-400 hover:shadow-md transition-all ${networkStatus.inNetwork ? "text-destructive hover:text-destructive" : ""}`}
                     data-testid="button-network-toggle"
                   >
                     {networkLoading ? (
@@ -1230,16 +1310,6 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                     {networkStatus.inNetwork ? 'Remove' : 'Add to Network'}
                   </Button>
                 )}
-                {canEdit && (
-                  <Button
-                    size="sm"
-                    onClick={isEditing ? handleSave : () => setIsEditing(true)}
-                    data-testid="button-edit"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    {isEditing ? 'Save' : 'Edit'}
-                  </Button>
-                )}
               </div>
             </div>
           </div>
@@ -1250,13 +1320,33 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
               {/* Campaign Status */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Campaign Status</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Campaign Status</CardTitle>
+                    {canEdit && (
+                      <Button
+                        variant={isEditingCampaign ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          if (isEditingCampaign) {
+                            handleSaveCampaign();
+                          } else {
+                            setIsEditingCampaign(true);
+                          }
+                        }}
+                        className="shadow-sm border-gray-300 hover:border-gray-400 hover:shadow-md transition-all"
+                        data-testid="button-edit-campaign"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        {isEditingCampaign ? 'Save' : 'Edit'}
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Supporter Status */}
                   <div>
                     <Label className="text-sm font-medium mb-3 block">Supporter Status</Label>
-                    {canEdit && isEditing ? (
+                    {canEdit && isEditingCampaign ? (
                       <RadioGroup
                         value={supporterStatus}
                         onValueChange={(value) => setSupporterStatus(value as any)}
@@ -1310,7 +1400,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                   {/* Volunteer Likeliness */}
                   <div>
                     <Label className="text-sm font-medium mb-3 block">Likeliness to Volunteer</Label>
-                    {canEdit && isEditing ? (
+                    {canEdit && isEditingCampaign ? (
                       <RadioGroup
                         value={volunteerLikeliness}
                         onValueChange={(value) => setVolunteerLikeliness(value as any)}
@@ -1531,7 +1621,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                 <select 
                                   value={editingPhone.phoneType}
                                   onChange={(e) => setEditingPhone(prev => prev ? { ...prev, phoneType: e.target.value } : null)}
-                                  className="px-3 py-2 border border-input rounded-md"
+                                  className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
                                 >
                                   <option value="mobile">Mobile</option>
                                   <option value="home">Home</option>
@@ -1620,7 +1710,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             <select 
                               value={newPhone.phoneType}
                               onChange={(e) => setNewPhone(prev => ({ ...prev, phoneType: e.target.value as any }))}
-                              className="px-3 py-2 border border-input rounded-md"
+                              className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
                             >
                               <option value="mobile">Mobile</option>
                               <option value="home">Home</option>
@@ -1661,7 +1751,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                                 <select 
                                   value={editingEmail.emailType}
                                   onChange={(e) => setEditingEmail(prev => prev ? { ...prev, emailType: e.target.value } : null)}
-                                  className="px-3 py-2 border border-input rounded-md"
+                                  className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
                                 >
                                   <option value="personal">Personal</option>
                                   <option value="work">Work</option>
@@ -1761,7 +1851,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             <select
                               value={newEmail.emailType}
                               onChange={(e) => setNewEmail(prev => ({ ...prev, emailType: e.target.value as any }))}
-                              className="px-3 py-2 border border-input rounded-md"
+                              className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
                             >
                               <option value="personal">Personal</option>
                               <option value="work">Work</option>
@@ -1785,15 +1875,35 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                 {/* Notes Section */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Notes
-                      <span className="text-xs text-muted-foreground">
-                        {notes.length}/500 characters
-                      </span>
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        Notes
+                        <span className="text-xs text-muted-foreground">
+                          {notes.length}/500 characters
+                        </span>
+                      </CardTitle>
+                      {canEdit && (
+                        <Button
+                          variant={isEditingNotes ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => {
+                            if (isEditingNotes) {
+                              handleSaveNotes();
+                            } else {
+                              setIsEditingNotes(true);
+                            }
+                          }}
+                          className="shadow-sm border-gray-300 hover:border-gray-400 hover:shadow-md transition-all"
+                          data-testid="button-edit-notes"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          {isEditingNotes ? 'Save' : 'Edit'}
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    {isEditing && canEdit ? (
+                    {isEditingNotes && canEdit ? (
                       <Textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value.slice(0, 500))}
@@ -1811,103 +1921,98 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
 
                 {/* District Information */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <span>District Information</span>
-                      <Lock className="w-4 h-4 text-yellow-500" />
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground">Precinct</Label>
-                        <p className="text-sm mt-1">{details.precinct || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Congressional District</Label>
-                        <p className="text-sm mt-1">{details.district || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">House District</Label>
-                        <p className="text-sm mt-1">{details.houseDistrict || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Senate District</Label>
-                        <p className="text-sm mt-1">{details.senateDistrict || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">Commission District</Label>
-                        <p className="text-sm mt-1">{details.commissionDistrict || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">School Board District</Label>
-                        <p className="text-sm mt-1">{details.schoolBoardDistrict || 'Not provided'}</p>
-                      </div>
-                    </div>
-                  </CardContent>
+                  <Accordion type="multiple" defaultValue={[]} className="w-full">
+                    <AccordionItem value="districts" className="border-none">
+                      <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                        <CardTitle className="flex items-center gap-2">
+                          <span>District Information</span>
+                          <Lock className="w-4 h-4 text-yellow-500" />
+                        </CardTitle>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-6 pb-6">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-muted-foreground">Precinct</Label>
+                            <p className="text-sm mt-1">{details.precinct || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Congressional District</Label>
+                            <p className="text-sm mt-1">{details.district || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">House District</Label>
+                            <p className="text-sm mt-1">{details.houseDistrict || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Senate District</Label>
+                            <p className="text-sm mt-1">{details.senateDistrict || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">Commission District</Label>
+                            <p className="text-sm mt-1">{details.commissionDistrict || 'Not provided'}</p>
+                          </div>
+                          <div>
+                            <Label className="text-muted-foreground">School Board District</Label>
+                            <p className="text-sm mt-1">{details.schoolBoardDistrict || 'Not provided'}</p>
+                          </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </Card>
 
                 {/* Activity Timeline */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Activity Timeline</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
-                      {details.auditLogs.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No activity recorded.</p>
-                      ) : (
-                        details.auditLogs.map((log: any) => (
-                          <div key={log.id} className="flex space-x-3 pb-4 border-b border-border last:border-b-0 last:pb-0">
-                            <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                              <History className="w-3 h-3 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm">
-                                <span className="font-medium">
-                                  {log.user?.firstName} {log.user?.lastName}
-                                </span>
-                                <span> {log.action}d {log.fieldName}</span>
-                              </p>
-                              {(log.oldValue || log.newValue) && (
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                  {log.oldValue && <p>Before: {log.oldValue}</p>}
-                                  {log.newValue && <p>After: {log.newValue}</p>}
+                  <Accordion type="multiple" defaultValue={[]} className="w-full">
+                    <AccordionItem value="activity" className="border-none">
+                      <AccordionTrigger className="px-6 py-4 hover:no-underline">
+                        <CardTitle>Activity Timeline</CardTitle>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-6 pb-6">
+                        <div className="space-y-4 max-h-96 overflow-y-auto">
+                          {details.auditLogs.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No activity recorded.</p>
+                          ) : (
+                            details.auditLogs.map((log: any) => (
+                              <div key={log.id} className="flex space-x-3 pb-4 border-b border-border last:border-b-0 last:pb-0">
+                                <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                  <History className="w-3 h-3 text-primary" />
                                 </div>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(log.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            {user && user.role === 'admin' && (
-                              <Button
-                                variant="ghost" 
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Undo className="w-3 h-3" />
-                              </Button>
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </CardContent>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm">
+                                    <span className="font-medium">
+                                      {log.user?.firstName} {log.user?.lastName}
+                                    </span>
+                                    <span> {log.action}d {log.fieldName}</span>
+                                  </p>
+                                  {(log.oldValue || log.newValue) && (
+                                    <div className="mt-1 text-xs text-muted-foreground">
+                                      {log.oldValue && <p>Before: {log.oldValue}</p>}
+                                      {log.newValue && <p>After: {log.newValue}</p>}
+                                    </div>
+                                  )}
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {new Date(log.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                {user && user.role === 'admin' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Undo className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </Card>
 
-                {/* Action Buttons */}
-                {isEditing && canEdit && (
-                  <div className="flex space-x-2">
-                    <Button
-                      onClick={handleSave}
-                      disabled={updateContactMutation.isPending}
-                      className="flex-1"
-                      data-testid="button-save"
-                    >
-                      {updateContactMutation.isPending ? 'Saving...' : 'Save Changes'}
-                    </Button>
-                  </div>
-                )}
             </div>
           </div>
         </div>
