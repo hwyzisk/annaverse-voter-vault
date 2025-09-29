@@ -155,13 +155,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         setUserSession(req, result.user.id);
         console.log('✅ Session set for user:', result.user.id);
 
-        // Force a delay to let express-session set the header
-        setTimeout(() => {
-          const setCookie = res.getHeaders()['set-cookie'];
-          console.log('🍪 ACTUAL Set-Cookie header being sent:', setCookie);
-          console.log('📤 Sending success response');
-          res.json(result);
-        }, 10);
+        // MANUAL COOKIE TEST: Set cookie manually to bypass express-session
+        const sessionId = req.session.id;
+        const cookieValue = `connect.sid=s%3A${sessionId}.signature; Path=/; HttpOnly; Secure; SameSite=Lax`;
+        res.setHeader('Set-Cookie', cookieValue);
+        console.log('🍪 MANUAL Set-Cookie header set:', cookieValue);
+
+        console.log('📤 Sending success response');
+        res.json(result);
       } else {
         console.log('❌ Login failed:', result.message);
         res.status(401).json(result);
