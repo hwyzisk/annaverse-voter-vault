@@ -22,7 +22,7 @@ export async function setupAuth(app: Express) {
     store: new PgSession({
       pool: pool,
       tableName: 'sessions',
-      createTableIfMissing: false // We already have the sessions table from schema
+      createTableIfMissing: false
     }),
     secret: process.env.SESSION_SECRET || 'fallback-secret-for-dev',
     resave: false,
@@ -60,37 +60,9 @@ export function isAuthenticated(req: any, res: any, next: any) {
 // Helper to set user session
 export function setUserSession(req: any, userId: string) {
   console.log('💾 Setting session for user:', userId);
-  console.log('💾 Session before:', req.session?.userId || 'No session');
-  console.log('💾 Old session ID:', req.session?.id || 'No session ID');
-
-  // Regenerate session to create new session ID and clear any old data
-  return new Promise((resolve, reject) => {
-    req.session.regenerate((err: any) => {
-      if (err) {
-        console.error('💥 Session regenerate error:', err);
-        reject(err);
-        return;
-      }
-
-      console.log('🔄 Session regenerated');
-      console.log('💾 New session ID:', req.session?.id || 'No session ID');
-
-      // Set user ID in the new session
-      req.session.userId = userId;
-      console.log('💾 Session after:', req.session?.userId || 'Failed to set');
-
-      // Save the session
-      req.session.save((saveErr: any) => {
-        if (saveErr) {
-          console.error('💥 Session save error:', saveErr);
-          reject(saveErr);
-        } else {
-          console.log('✅ Session saved successfully');
-          resolve(true);
-        }
-      });
-    });
-  });
+  console.log('💾 Session ID:', req.session?.id || 'No session ID');
+  req.session.userId = userId;
+  console.log('💾 Session after setting userId:', req.session?.userId);
 }
 
 // Helper to clear user session

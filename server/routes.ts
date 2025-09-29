@@ -151,11 +151,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await AuthService.loginUser({ email, password });
 
       if (result.success && result.user) {
-        // Set session for authenticated user and wait for save
-        await setUserSession(req, result.user.id);
+        // Set session for authenticated user
+        setUserSession(req, result.user.id);
         console.log('✅ Session set for user:', result.user.id);
-        console.log('🍪 Session after login:', req.session?.userId || 'Failed to set session');
-        console.log('🍪 Set-Cookie header about to be sent:', res.getHeaders()['set-cookie']);
         console.log('📤 Sending success response');
         res.json(result);
       } else {
