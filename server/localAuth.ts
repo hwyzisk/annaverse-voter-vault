@@ -62,7 +62,11 @@ export function isAuthenticated(req: any, res: any, next: any) {
 export function setUserSession(req: any, userId: string) {
   console.log('💾 Setting session for user:', userId);
   console.log('💾 Session ID:', req.session?.id || 'No session ID');
+
+  // Mark session as modified to force cookie to be sent
+  req.session.touch();
   req.session.userId = userId;
+
   console.log('💾 Session after setting userId:', req.session?.userId);
 }
 
