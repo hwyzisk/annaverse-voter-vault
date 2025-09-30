@@ -6,6 +6,7 @@ import {
   auditLogs,
   systemSettings,
   userNetworks,
+  exportJobs,
   type User,
   type UpsertUser,
   type Contact,
@@ -20,9 +21,11 @@ import {
   type UserNetwork,
   type InsertUserNetwork,
   type UpdateUserNetwork,
+  type ExportJob,
+  type InsertExportJob,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, ilike, or, count } from "drizzle-orm";
+import { eq, desc, and, sql, ilike, or, count, inArray, isNotNull, lte, gte } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -83,6 +86,15 @@ export interface IStorage {
 
   // Impact stats
   getImpactStats(): Promise<any>;
+
+  // Export operations
+  getExportOptions(): Promise<any>;
+  getExportPreviewCount(filters: any): Promise<number>;
+  createExportJob(userId: string, filters: any): Promise<ExportJob>;
+  getExportJob(jobId: string): Promise<ExportJob | undefined>;
+  updateExportJob(jobId: string, updates: any): Promise<void>;
+  getFilteredContactsForExport(filters: any, limit: number, offset: number): Promise<any[]>;
+  getExportHistory(userId: string): Promise<ExportJob[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -144,22 +156,16 @@ export class DatabaseStorage implements IStorage {
         middleName: contacts.middleName,
         lastName: contacts.lastName,
         fullName: contacts.fullName,
-        suffix: contacts.suffix,
-        birthDate: contacts.birthDate,
-        age: contacts.age,
-        gender: contacts.gender,
+        dateOfBirth: contacts.dateOfBirth,
         party: contacts.party,
-        address: contacts.address,
+        streetAddress: contacts.streetAddress,
         city: contacts.city,
         state: contacts.state,
         zipCode: contacts.zipCode,
-        county: contacts.county,
         precinct: contacts.precinct,
         district: contacts.district,
         supporterStatus: contacts.supporterStatus,
-        voteHistory: contacts.voteHistory,
         registrationDate: contacts.registrationDate,
-        lastVotedDate: contacts.lastVotedDate,
         notes: contacts.notes,
         createdAt: contacts.createdAt,
         updatedAt: contacts.updatedAt,
@@ -729,7 +735,7 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error('Leaderboard stats error:', error);
-      if (error && error.stack) console.error('Error stack:', error.stack);
+      if (error && (error as Error).stack) console.error('Error stack:', (error as Error).stack);
       return {
         totalActiveVoters: -1,
         contactsWithNewInfo: 0,
@@ -966,6 +972,346 @@ export class DatabaseStorage implements IStorage {
         emailAddressesAdded: 0,
         activeVolunteers: 0
       };
+    }
+  }
+
+  // Export operations
+  async getExportOptions(): Promise<any> {
+    try {
+      // Get unique parties
+      const parties = await db
+        .selectDistinct({ party: contacts.party })
+        .from(contacts)
+        .where(and(isNotNull(contacts.party), sql`${contacts.party} != ''`))
+        .orderBy(contacts.party);
+
+      // Get supporter statuses
+      const supporterStatuses = [
+        { value: 'confirmed-supporter', label: 'Confirmed Supporter' },
+        { value: 'likely-supporter', label: 'Likely Supporter' },
+        { value: 'opposition', label: 'Opposition' },
+        { value: 'unknown', label: 'Unknown' }
+      ];
+
+      // Get volunteer statuses
+      const volunteerStatuses = [
+        { value: 'confirmed-volunteer', label: 'Confirmed Volunteer' },
+        { value: 'likely-to-volunteer', label: 'Likely to Volunteer' },
+        { value: 'will-not-volunteer', label: 'Will Not Volunteer' },
+        { value: 'unknown', label: 'Unknown' }
+      ];
+
+      return {
+        parties: parties.map(p => p.party).filter(Boolean),
+        supporterStatuses,
+        volunteerStatuses
+      };
+    } catch (error) {
+      console.error('Error getting export options:', error);
+      return {
+        parties: [],
+        supporterStatuses: [],
+        volunteerStatuses: []
+      };
+    }
+  }
+
+  async getExportPreviewCount(filters: any): Promise<number> {
+    try {
+      let query = db.select({ count: count() }).from(contacts);
+      const conditions = [];
+
+      // Apply export type filters
+      if (filters.exportType === 'active-voters') {
+        conditions.push(eq(contacts.isActive, true));
+      } else if (filters.exportType === 'supporters') {
+        conditions.push(or(
+          eq(contacts.supporterStatus, 'confirmed-supporter'),
+          eq(contacts.supporterStatus, 'likely-supporter')
+        ));
+      } else if (filters.exportType === 'volunteers') {
+        conditions.push(or(
+          eq(contacts.volunteerLikeliness, 'confirmed-volunteer'),
+          eq(contacts.volunteerLikeliness, 'likely-to-volunteer')
+        ));
+      }
+
+      // Apply date range filters
+      if (filters.dateRange?.type !== 'all' && filters.dateRange?.startDate) {
+        const dateField = filters.dateRange.type === 'created' ? contacts.createdAt : contacts.updatedAt;
+        if (filters.dateRange.startDate) {
+          conditions.push(sql`${dateField} >= ${filters.dateRange.startDate}`);
+        }
+        if (filters.dateRange.endDate) {
+          conditions.push(sql`${dateField} <= ${filters.dateRange.endDate}`);
+        }
+      }
+
+      // Apply supporter status filters
+      if (filters.supporterStatus?.length > 0) {
+        conditions.push(inArray(contacts.supporterStatus, filters.supporterStatus));
+      }
+
+      // Apply volunteer status filters
+      if (filters.volunteerStatus?.length > 0) {
+        conditions.push(inArray(contacts.volunteerLikeliness, filters.volunteerStatus));
+      }
+
+      // Apply party filters
+      if (filters.party?.length > 0) {
+        conditions.push(inArray(contacts.party, filters.party));
+      }
+
+      // Apply ZIP code filters
+      if (filters.zipCodes?.length > 0) {
+        const zipConditions = filters.zipCodes.map((zip: string) => eq(contacts.zipCode, zip.trim()));
+        conditions.push(or(...zipConditions));
+      }
+
+      // Apply age range filters
+      if (filters.ageRange?.min || filters.ageRange?.max) {
+        if (filters.ageRange.min) {
+          const maxBirthDate = new Date();
+          maxBirthDate.setFullYear(maxBirthDate.getFullYear() - parseInt(filters.ageRange.min));
+          conditions.push(lte(contacts.dateOfBirth, maxBirthDate.toISOString().split('T')[0]));
+        }
+        if (filters.ageRange.max) {
+          const minBirthDate = new Date();
+          minBirthDate.setFullYear(minBirthDate.getFullYear() - parseInt(filters.ageRange.max) - 1);
+          conditions.push(gte(contacts.dateOfBirth, minBirthDate.toISOString().split('T')[0]));
+        }
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const [result] = await query;
+      return result.count;
+    } catch (error) {
+      console.error('Error getting export preview count:', error);
+      return 0;
+    }
+  }
+
+  async createExportJob(userId: string, filters: any): Promise<ExportJob> {
+    const newJob: InsertExportJob = {
+      userId,
+      filters,
+      status: 'pending',
+      progress: 0,
+      totalRecords: 0,
+      processedRecords: 0
+    };
+
+    const [job] = await db.insert(exportJobs).values(newJob).returning();
+    return job;
+  }
+
+  async getExportJob(jobId: string): Promise<ExportJob | undefined> {
+    const [job] = await db
+      .select()
+      .from(exportJobs)
+      .where(eq(exportJobs.id, jobId));
+
+    return job;
+  }
+
+  async updateExportJob(jobId: string, updates: any): Promise<void> {
+    await db
+      .update(exportJobs)
+      .set(updates)
+      .where(eq(exportJobs.id, jobId));
+  }
+
+  async getFilteredContactsForExport(filters: any, limit: number, offset: number): Promise<any[]> {
+    try {
+      let query = db
+        .select({
+          id: contacts.id,
+          systemId: contacts.systemId,
+          firstName: contacts.firstName,
+          middleName: contacts.middleName,
+          lastName: contacts.lastName,
+          fullName: contacts.fullName,
+          dateOfBirth: contacts.dateOfBirth,
+          party: contacts.party,
+          streetAddress: contacts.streetAddress,
+          city: contacts.city,
+          state: contacts.state,
+          zipCode: contacts.zipCode,
+          precinct: contacts.precinct,
+          district: contacts.district,
+          houseDistrict: contacts.houseDistrict,
+          senateDistrict: contacts.senateDistrict,
+          commissionDistrict: contacts.commissionDistrict,
+          schoolBoardDistrict: contacts.schoolBoardDistrict,
+          voterId: contacts.voterId,
+          registrationDate: contacts.registrationDate,
+          voterStatus: contacts.voterStatus,
+          supporterStatus: contacts.supporterStatus,
+          volunteerLikeliness: contacts.volunteerLikeliness,
+          notes: contacts.notes,
+          addressSource: contacts.addressSource,
+          createdAt: contacts.createdAt,
+          updatedAt: contacts.updatedAt,
+          createdBy: contacts.createdBy,
+          lastUpdatedBy: contacts.lastUpdatedBy
+        })
+        .from(contacts);
+
+      const conditions = [];
+
+      // Apply same filters as preview count
+      if (filters.exportType === 'active-voters') {
+        conditions.push(eq(contacts.isActive, true));
+      } else if (filters.exportType === 'supporters') {
+        conditions.push(or(
+          eq(contacts.supporterStatus, 'confirmed-supporter'),
+          eq(contacts.supporterStatus, 'likely-supporter')
+        ));
+      } else if (filters.exportType === 'volunteers') {
+        conditions.push(or(
+          eq(contacts.volunteerLikeliness, 'confirmed-volunteer'),
+          eq(contacts.volunteerLikeliness, 'likely-to-volunteer')
+        ));
+      }
+
+      if (filters.dateRange?.type !== 'all' && filters.dateRange?.startDate) {
+        const dateField = filters.dateRange.type === 'created' ? contacts.createdAt : contacts.updatedAt;
+        if (filters.dateRange.startDate) {
+          conditions.push(sql`${dateField} >= ${filters.dateRange.startDate}`);
+        }
+        if (filters.dateRange.endDate) {
+          conditions.push(sql`${dateField} <= ${filters.dateRange.endDate}`);
+        }
+      }
+
+      if (filters.supporterStatus?.length > 0) {
+        conditions.push(inArray(contacts.supporterStatus, filters.supporterStatus));
+      }
+
+      if (filters.volunteerStatus?.length > 0) {
+        conditions.push(inArray(contacts.volunteerLikeliness, filters.volunteerStatus));
+      }
+
+      if (filters.party?.length > 0) {
+        conditions.push(inArray(contacts.party, filters.party));
+      }
+
+      if (filters.zipCodes?.length > 0) {
+        const zipConditions = filters.zipCodes.map((zip: string) => eq(contacts.zipCode, zip.trim()));
+        conditions.push(or(...zipConditions));
+      }
+
+      if (filters.ageRange?.min || filters.ageRange?.max) {
+        if (filters.ageRange.min) {
+          const maxBirthDate = new Date();
+          maxBirthDate.setFullYear(maxBirthDate.getFullYear() - parseInt(filters.ageRange.min));
+          conditions.push(lte(contacts.dateOfBirth, maxBirthDate.toISOString().split('T')[0]));
+        }
+        if (filters.ageRange.max) {
+          const minBirthDate = new Date();
+          minBirthDate.setFullYear(minBirthDate.getFullYear() - parseInt(filters.ageRange.max) - 1);
+          conditions.push(gte(contacts.dateOfBirth, minBirthDate.toISOString().split('T')[0]));
+        }
+      }
+
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+
+      const contactBatch = await query
+        .orderBy(contacts.lastName, contacts.firstName)
+        .limit(limit)
+        .offset(offset);
+
+      // Get contact IDs for related data
+      const contactIds = contactBatch.map(c => c.id);
+
+      if (contactIds.length === 0) {
+        return [];
+      }
+
+      // Get phones for this batch
+      const phones = await db
+        .select({
+          contactId: contactPhones.contactId,
+          phoneNumber: contactPhones.phoneNumber,
+          phoneType: contactPhones.phoneType,
+          isPrimary: contactPhones.isPrimary
+        })
+        .from(contactPhones)
+        .where(inArray(contactPhones.contactId, contactIds));
+
+      // Get emails for this batch
+      const emails = await db
+        .select({
+          contactId: contactEmails.contactId,
+          email: contactEmails.email,
+          emailType: contactEmails.emailType,
+          isPrimary: contactEmails.isPrimary
+        })
+        .from(contactEmails)
+        .where(inArray(contactEmails.contactId, contactIds));
+
+      // Map related data to contacts
+      const phonesMap = new Map<string, any[]>();
+      const emailsMap = new Map<string, any[]>();
+
+      phones.forEach(phone => {
+        if (!phonesMap.has(phone.contactId)) {
+          phonesMap.set(phone.contactId, []);
+        }
+        phonesMap.get(phone.contactId)!.push(phone);
+      });
+
+      emails.forEach(email => {
+        if (!emailsMap.has(email.contactId)) {
+          emailsMap.set(email.contactId, []);
+        }
+        emailsMap.get(email.contactId)!.push(email);
+      });
+
+      // Enhance contacts with related data
+      return contactBatch.map(contact => {
+        const contactPhones = phonesMap.get(contact.id) || [];
+        const contactEmails = emailsMap.get(contact.id) || [];
+
+        const primaryPhone = contactPhones.find(p => p.isPrimary)?.phoneNumber ||
+                            contactPhones[0]?.phoneNumber || '';
+        const primaryEmail = contactEmails.find(e => e.isPrimary)?.email ||
+                           contactEmails[0]?.email || '';
+
+        const allPhones = contactPhones.map(p => `${p.phoneNumber} (${p.phoneType})`).join(', ');
+        const allEmails = contactEmails.map(e => `${e.email} (${e.emailType})`).join(', ');
+
+        return {
+          ...contact,
+          primaryPhone,
+          primaryEmail,
+          allPhones,
+          allEmails
+        };
+      });
+
+    } catch (error) {
+      console.error('Error getting filtered contacts for export:', error);
+      return [];
+    }
+  }
+
+  async getExportHistory(userId: string): Promise<ExportJob[]> {
+    try {
+      return await db
+        .select()
+        .from(exportJobs)
+        .where(eq(exportJobs.userId, userId))
+        .orderBy(desc(exportJobs.createdAt))
+        .limit(20);
+    } catch (error) {
+      console.error('Error getting export history:', error);
+      return [];
     }
   }
 }

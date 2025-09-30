@@ -424,7 +424,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
             <Button
               variant="outline"
               size="sm"
-              onClick={handleDatabaseExport}
+              onClick={() => window.location.href = '/admin/export'}
               data-testid="button-export-data"
             >
               <i className="fas fa-download mr-2"></i>Export Data

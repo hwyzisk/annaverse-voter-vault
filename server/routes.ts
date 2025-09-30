@@ -9,6 +9,8 @@ import { AuthService } from "./authService";
 import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertUserNetworkSchema, updateUserNetworkSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
+import fs from "fs";
+import path from "path";
 
 // Secure filename validation schema
 const attachedExcelRequestSchema = z.object({
@@ -76,6 +78,195 @@ const requireRole = (roles: string[]) => {
     next();
   };
 };
+
+// Helper function to safely format dates for CSV
+function formatDateForCSV(value: any): string {
+  if (!value) return '';
+  if (value instanceof Date) {
+    return value.toISOString().split('T')[0]; // YYYY-MM-DD format
+  }
+  if (typeof value === 'string') {
+    // Check if it's already a date string
+    const date = new Date(value);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+    return value; // Return as-is if not a valid date
+  }
+  return String(value);
+}
+
+// Background export processing function
+async function processExportJob(jobId: string) {
+  try {
+    console.log(`🚀 Starting export job ${jobId}`);
+
+    // Get the job details
+    const job = await storage.getExportJob(jobId);
+    if (!job) {
+      console.error(`❌ Export job ${jobId} not found`);
+      return;
+    }
+
+    // Update status to processing
+    await storage.updateExportJob(jobId, {
+      status: 'processing',
+      progress: 0,
+      processedRecords: 0
+    });
+
+    // Create exports directory if it doesn't exist
+    const exportDir = path.join(process.cwd(), 'exports');
+    if (!fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir, { recursive: true });
+    }
+
+    // Generate filename
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const filename = `annaverse-export-${timestamp}-${jobId.slice(0, 8)}.csv`;
+    const filePath = path.join(exportDir, filename);
+
+    // Start streaming export
+    const writeStream = fs.createWriteStream(filePath);
+
+    // CSV Headers - including all requested fields
+    const headers = [
+      'System ID', 'First Name', 'Middle Name', 'Last Name', 'Full Name', 'Suffix',
+      'Date of Birth', 'Age', 'Gender', 'Party Affiliation',
+      'Street Address', 'City', 'State', 'ZIP Code', 'County', 'Precinct', 'District',
+      'House District', 'Senate District', 'Commission District', 'School Board District',
+      'Voter ID', 'Registration Date', 'Voter Status', 'Vote History', 'Last Voted Date',
+      'Supporter Status', 'Volunteer Likelihood', 'Notes',
+      'Primary Phone', 'All Phone Numbers', 'Primary Email', 'All Email Addresses',
+      'Address Source', 'Created At', 'Updated At', 'Created By', 'Last Updated By'
+    ];
+
+    // Write CSV header
+    writeStream.write(headers.map(h => `"${h}"`).join(',') + '\n');
+
+    const BATCH_SIZE = 1000;
+    let offset = 0;
+    let totalProcessed = 0;
+
+    // Get total count for progress tracking
+    const totalRecords = await storage.getExportPreviewCount(job.filters);
+
+    await storage.updateExportJob(jobId, {
+      totalRecords,
+      progress: 0
+    });
+
+    console.log(`📊 Export job ${jobId}: Processing ${totalRecords} total records`);
+
+    while (true) {
+      // Get batch of contacts with filtering
+      const batch = await storage.getFilteredContactsForExport(job.filters, BATCH_SIZE, offset);
+
+      if (batch.length === 0) {
+        break; // No more records
+      }
+
+      // Write batch to CSV
+      for (const contact of batch) {
+        const row = [
+          contact.systemId || '',
+          contact.firstName || '',
+          contact.middleName || '',
+          contact.lastName || '',
+          contact.fullName || '',
+          contact.suffix || '',
+          formatDateForCSV(contact.dateOfBirth),
+          contact.age || '',
+          contact.gender || '',
+          contact.party || '',
+          contact.streetAddress || '',
+          contact.city || '',
+          contact.state || '',
+          contact.zipCode || '',
+          contact.county || '',
+          contact.precinct || '',
+          contact.district || '',
+          contact.houseDistrict || '',
+          contact.senateDistrict || '',
+          contact.commissionDistrict || '',
+          contact.schoolBoardDistrict || '',
+          contact.voterId || '',
+          formatDateForCSV(contact.registrationDate),
+          contact.voterStatus || '',
+          contact.voteHistory || '',
+          formatDateForCSV(contact.lastVotedDate),
+          contact.supporterStatus || '',
+          contact.volunteerLikeliness || '',
+          contact.notes || '',
+          contact.primaryPhone || '',
+          contact.allPhones || '',
+          contact.primaryEmail || '',
+          contact.allEmails || '',
+          contact.addressSource || '',
+          formatDateForCSV(contact.createdAt),
+          formatDateForCSV(contact.updatedAt),
+          contact.createdBy || '',
+          contact.lastUpdatedBy || ''
+        ];
+
+        // Escape and quote each field for CSV
+        const csvRow = row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
+        writeStream.write(csvRow + '\n');
+      }
+
+      totalProcessed += batch.length;
+      offset += BATCH_SIZE;
+
+      // Update progress
+      const progress = Math.min(Math.round((totalProcessed / totalRecords) * 100), 100);
+
+      await storage.updateExportJob(jobId, {
+        progress,
+        processedRecords: totalProcessed
+      });
+
+      console.log(`📈 Export job ${jobId}: ${totalProcessed}/${totalRecords} (${progress}%)`);
+
+      // Small delay to prevent overwhelming the database
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    // Close the file stream
+    writeStream.end();
+
+    // Wait for stream to finish
+    await new Promise((resolve, reject) => {
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
+
+    // Get file size
+    const stats = fs.statSync(filePath);
+    const fileSizeBytes = stats.size;
+
+    // Update job as completed
+    await storage.updateExportJob(jobId, {
+      status: 'completed',
+      progress: 100,
+      processedRecords: totalProcessed,
+      completedAt: new Date(), // Pass Date object, not string
+      filePath,
+      filename,
+      fileSizeBytes,
+      downloadUrl: `/api/admin/export/download/${jobId}`
+    });
+
+    console.log(`✅ Export job ${jobId} completed: ${totalProcessed} records, ${(fileSizeBytes / 1024 / 1024).toFixed(1)} MB`);
+
+  } catch (error) {
+    console.error(`❌ Export job ${jobId} failed:`, error);
+
+    await storage.updateExportJob(jobId, {
+      status: 'failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Disable ETag for API routes to prevent 304 caching
@@ -521,6 +712,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Note: These endpoints removed in favor of proper approval workflow
   // Use POST /api/admin/approve-user/:id and POST /api/admin/reject-user/:id instead
   // Those endpoints use AuthService which sends proper emails and handles full workflow
+
+  // New Export System Endpoints
+
+  // Export options endpoint
+  app.get('/api/admin/export/options', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const options = await storage.getExportOptions();
+      res.json(options);
+    } catch (error) {
+      console.error("Error getting export options:", error);
+      res.status(500).json({ message: "Failed to get export options" });
+    }
+  });
+
+  // Export preview endpoint
+  app.post('/api/admin/export/preview', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const filters = req.body;
+      const count = await storage.getExportPreviewCount(filters);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error getting export preview:", error);
+      res.status(500).json({ message: "Failed to get preview count" });
+    }
+  });
+
+  // Start export endpoint
+  app.post('/api/admin/export/start', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const filters = req.body;
+      const job = await storage.createExportJob(req.currentUser.id, filters);
+
+      // Start the export process in the background
+      processExportJob(job.id);
+
+      res.json({ job });
+    } catch (error) {
+      console.error("Error starting export:", error);
+      res.status(500).json({ message: "Failed to start export" });
+    }
+  });
+
+  // Export progress endpoint (Server-Sent Events)
+  app.get('/api/admin/export/progress/:jobId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    const jobId = req.params.jobId;
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    const sendUpdate = async () => {
+      try {
+        const job = await storage.getExportJob(jobId);
+        if (job) {
+          res.write(`data: ${JSON.stringify(job)}\n\n`);
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            res.end();
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error sending progress update:", error);
+        res.end();
+      }
+    };
+
+    // Send initial update
+    await sendUpdate();
+
+    // Send updates every 2 seconds
+    const interval = setInterval(sendUpdate, 2000);
+
+    req.on('close', () => {
+      clearInterval(interval);
+    });
+  });
+
+  // Export history endpoint
+  app.get('/api/admin/export/history', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const history = await storage.getExportHistory(req.currentUser.id);
+      res.json(history);
+    } catch (error) {
+      console.error("Error getting export history:", error);
+      res.status(500).json({ message: "Failed to get export history" });
+    }
+  });
+
+  // Download export file endpoint
+  app.get('/api/admin/export/download/:jobId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
+    try {
+      const jobId = req.params.jobId;
+      const job = await storage.getExportJob(jobId);
+
+      if (!job || job.status !== 'completed' || !job.filePath) {
+        return res.status(404).json({ message: "Export file not found" });
+      }
+
+      if (!fs.existsSync(job.filePath)) {
+        return res.status(404).json({ message: "Export file no longer exists" });
+      }
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+
+      const fileStream = fs.createReadStream(job.filePath);
+      fileStream.pipe(res);
+
+    } catch (error) {
+      console.error("Error downloading export:", error);
+      res.status(500).json({ message: "Failed to download export" });
+    }
+  });
 
   // User export endpoint
   app.get('/api/admin/users/export', isAuthenticated, requireRole(['admin']), async (req: any, res) => {

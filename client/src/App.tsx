@@ -17,6 +17,7 @@ import Network from "@/pages/network";
 import OurImpact from "@/pages/OurImpact";
 import VolunteerMessagingGuidance from "@/pages/VolunteerMessagingGuidance";
 import ShareAnnaPage from "@/pages/ShareAnnaPage";
+import ExportPage from "@/pages/export";
 import GlassmorphismShowcase from "@/pages/GlassmorphismShowcase";
 
 function Router() {
@@ -53,6 +54,7 @@ function Router() {
             <Route path="/share" component={ShareAnnaPage} />
             <Route path="/our-impact" component={OurImpact} />
             <Route path="/admin" component={Admin} />
+            <Route path="/admin/export" component={ExportPage} />
             <Route path="/glassmorphism" component={GlassmorphismShowcase} />
           </>
         )}

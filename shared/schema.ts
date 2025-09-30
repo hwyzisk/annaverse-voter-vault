@@ -172,6 +172,28 @@ export const userNetworks = pgTable("user_networks", {
   uniqueUserContact: unique().on(table.userId, table.contactId),
 }));
 
+// Export jobs table for tracking background exports
+export const exportJobs = pgTable("export_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  status: varchar("status", { enum: ['pending', 'processing', 'completed', 'failed'] }).notNull().default('pending'),
+  progress: integer("progress").notNull().default(0), // 0-100
+  totalRecords: integer("total_records").default(0),
+  processedRecords: integer("processed_records").default(0),
+  filters: jsonb("filters").notNull(), // Export filter criteria
+  filename: varchar("filename"),
+  filePath: text("file_path"),
+  fileSizeBytes: integer("file_size_bytes"),
+  downloadUrl: text("download_url"),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("idx_export_jobs_user_id").on(table.userId),
+  index("idx_export_jobs_status").on(table.status),
+  index("idx_export_jobs_created_at").on(table.createdAt),
+]);
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   contactsUpdated: many(contacts),
@@ -341,3 +363,6 @@ export type InsertAuditLog = typeof auditLogs.$inferInsert;
 export type UserNetwork = typeof userNetworks.$inferSelect;
 export type InsertUserNetwork = typeof userNetworks.$inferInsert;
 export type UpdateUserNetwork = z.infer<typeof updateUserNetworkSchema>;
+
+export type ExportJob = typeof exportJobs.$inferSelect;
+export type InsertExportJob = typeof exportJobs.$inferInsert;
