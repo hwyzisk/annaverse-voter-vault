@@ -107,8 +107,10 @@ async function processExportJob(jobId: string) {
       console.error(`❌ Export job ${jobId} not found`);
       return;
     }
+    console.log(`📋 Job details:`, { filters: job.filters, status: job.status });
 
     // Update status to processing
+    console.log(`🔄 Updating job ${jobId} status to processing`);
     await storage.updateExportJob(jobId, {
       status: 'processing',
       progress: 0,
@@ -117,7 +119,9 @@ async function processExportJob(jobId: string) {
 
     // Create exports directory if it doesn't exist
     const exportDir = path.join(process.cwd(), 'exports');
+    console.log(`📁 Export directory: ${exportDir}`);
     if (!fs.existsSync(exportDir)) {
+      console.log(`📁 Creating export directory: ${exportDir}`);
       fs.mkdirSync(exportDir, { recursive: true });
     }
 
@@ -125,8 +129,10 @@ async function processExportJob(jobId: string) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
     const filename = `annaverse-export-${timestamp}-${jobId.slice(0, 8)}.csv`;
     const filePath = path.join(exportDir, filename);
+    console.log(`📄 Export file path: ${filePath}`);
 
     // Start streaming export
+    console.log(`📝 Creating write stream for ${filePath}`);
     const writeStream = fs.createWriteStream(filePath);
 
     // CSV Headers - updated to separate public and volunteer data, remove unwanted columns
@@ -143,6 +149,7 @@ async function processExportJob(jobId: string) {
     ];
 
     // Write CSV header
+    console.log(`📝 Writing CSV headers`);
     writeStream.write(headers.map(h => `"${h}"`).join(',') + '\n');
 
     const BATCH_SIZE = 500; // Reduced for production stability
@@ -156,89 +163,113 @@ async function processExportJob(jobId: string) {
       progress: 0
     });
 
-    console.log(`📊 Export job ${jobId}: Starting batch processing`);
+    console.log(`📊 Export job ${jobId}: Starting batch processing with batch size ${BATCH_SIZE}`);
 
+    let batchCount = 0;
     while (true) {
+      batchCount++;
+      console.log(`📦 Export job ${jobId}: Processing batch ${batchCount} (offset: ${offset})`);
+
       // Get batch of contacts with filtering
-      const batch = await storage.getFilteredContactsForExport(job.filters, BATCH_SIZE, offset);
+      try {
+        const batch = await storage.getFilteredContactsForExport(job.filters, BATCH_SIZE, offset);
+        console.log(`📦 Export job ${jobId}: Batch ${batchCount} returned ${batch.length} contacts`);
 
-      if (batch.length === 0) {
-        break; // No more records
+        if (batch.length === 0) {
+          console.log(`📦 Export job ${jobId}: No more records, ending processing`);
+          break; // No more records
+        }
+
+        // Write batch to CSV
+        for (const contact of batch) {
+          const row = [
+            contact.systemId || '',
+            contact.firstName || '',
+            contact.middleName || '',
+            contact.lastName || '',
+            contact.fullName || '',
+            formatDateForCSV(contact.dateOfBirth),
+            contact.party || '',
+            contact.streetAddress || '',
+            contact.city || '',
+            contact.state || '',
+            contact.zipCode || '',
+            contact.precinct || '',
+            contact.district || '',
+            contact.houseDistrict || '',
+            contact.senateDistrict || '',
+            contact.commissionDistrict || '',
+            contact.schoolBoardDistrict || '',
+            contact.voterId || '',
+            formatDateForCSV(contact.registrationDate),
+            contact.voterStatus || '',
+            contact.supporterStatus || '',
+            contact.volunteerLikeliness || '',
+            contact.notes || '',
+            contact.primaryPhone || '',
+            contact.publicPhoneNumbers || '',
+            contact.volunteerPhoneNumbers || '',
+            contact.primaryEmail || '',
+            contact.publicEmailAddresses || '',
+            contact.volunteerEmailAddresses || '',
+            contact.addressSource || '',
+            formatDateForCSV(contact.createdAt),
+            formatDateForCSV(contact.updatedAt),
+            contact.createdBy || '',
+            contact.lastUpdatedBy || ''
+          ];
+
+          // Escape and quote each field for CSV
+          const csvRow = row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
+          writeStream.write(csvRow + '\n');
+        }
+
+        totalProcessed += batch.length;
+        offset += BATCH_SIZE;
+
+        // Update progress (just show records processed without percentage)
+        await storage.updateExportJob(jobId, {
+          processedRecords: totalProcessed,
+          progress: Math.min(50 + Math.floor(totalProcessed / 1000), 99) // Show incremental progress
+        });
+
+        console.log(`📈 Export job ${jobId}: ${totalProcessed} records processed so far`);
+
+        // Small delay to prevent overwhelming the database
+        await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay
+
+      } catch (batchError) {
+        console.error(`❌ Export job ${jobId}: Error processing batch ${batchCount}:`, batchError);
+        console.error(`❌ Batch error stack:`, batchError.stack);
+        throw batchError; // Re-throw to be caught by outer try-catch
       }
-
-      // Write batch to CSV
-      for (const contact of batch) {
-        const row = [
-          contact.systemId || '',
-          contact.firstName || '',
-          contact.middleName || '',
-          contact.lastName || '',
-          contact.fullName || '',
-          formatDateForCSV(contact.dateOfBirth),
-          contact.party || '',
-          contact.streetAddress || '',
-          contact.city || '',
-          contact.state || '',
-          contact.zipCode || '',
-          contact.precinct || '',
-          contact.district || '',
-          contact.houseDistrict || '',
-          contact.senateDistrict || '',
-          contact.commissionDistrict || '',
-          contact.schoolBoardDistrict || '',
-          contact.voterId || '',
-          formatDateForCSV(contact.registrationDate),
-          contact.voterStatus || '',
-          contact.supporterStatus || '',
-          contact.volunteerLikeliness || '',
-          contact.notes || '',
-          contact.primaryPhone || '',
-          contact.publicPhoneNumbers || '',
-          contact.volunteerPhoneNumbers || '',
-          contact.primaryEmail || '',
-          contact.publicEmailAddresses || '',
-          contact.volunteerEmailAddresses || '',
-          contact.addressSource || '',
-          formatDateForCSV(contact.createdAt),
-          formatDateForCSV(contact.updatedAt),
-          contact.createdBy || '',
-          contact.lastUpdatedBy || ''
-        ];
-
-        // Escape and quote each field for CSV
-        const csvRow = row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
-        writeStream.write(csvRow + '\n');
-      }
-
-      totalProcessed += batch.length;
-      offset += BATCH_SIZE;
-
-      // Update progress (just show records processed without percentage)
-      await storage.updateExportJob(jobId, {
-        processedRecords: totalProcessed,
-        progress: Math.min(50 + Math.floor(totalProcessed / 1000), 99) // Show incremental progress
-      });
-
-      console.log(`📈 Export job ${jobId}: ${totalProcessed} records processed`);
-
-      // Small delay to prevent overwhelming the database
-      await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay
     }
 
     // Close the file stream
+    console.log(`📝 Export job ${jobId}: Closing write stream`);
     writeStream.end();
 
     // Wait for stream to finish
+    console.log(`📝 Export job ${jobId}: Waiting for stream to finish`);
     await new Promise((resolve, reject) => {
-      writeStream.on('finish', resolve);
-      writeStream.on('error', reject);
+      writeStream.on('finish', () => {
+        console.log(`📝 Export job ${jobId}: Write stream finished`);
+        resolve(undefined);
+      });
+      writeStream.on('error', (error) => {
+        console.error(`❌ Export job ${jobId}: Write stream error:`, error);
+        reject(error);
+      });
     });
 
     // Get file size
+    console.log(`📊 Export job ${jobId}: Getting file stats`);
     const stats = fs.statSync(filePath);
     const fileSizeBytes = stats.size;
+    console.log(`📊 Export job ${jobId}: File size: ${fileSizeBytes} bytes`);
 
     // Update job as completed
+    console.log(`✅ Export job ${jobId}: Updating status to completed`);
     await storage.updateExportJob(jobId, {
       status: 'completed',
       progress: 100,
@@ -255,14 +286,18 @@ async function processExportJob(jobId: string) {
 
   } catch (error) {
     console.error(`❌ Export job ${jobId} failed:`, error);
+    console.error(`❌ Error stack:`, error.stack);
 
     try {
+      console.log(`🔄 Export job ${jobId}: Updating status to failed`);
       await storage.updateExportJob(jobId, {
         status: 'failed',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+      console.log(`✅ Export job ${jobId}: Status updated to failed`);
     } catch (updateError) {
       console.error(`❌ Failed to update job status for ${jobId}:`, updateError);
+      console.error(`❌ Update error stack:`, updateError.stack);
     }
   }
 }
@@ -741,16 +776,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/export/start', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
     try {
       const filters = req.body;
+      console.log(`🚀 Creating export job with filters:`, JSON.stringify(filters, null, 2));
+
       const job = await storage.createExportJob(req.currentUser.id, filters);
+      console.log(`✅ Export job created with ID: ${job.id}`);
 
       // Start the export process in the background with timeout protection
+      console.log(`🔄 Starting background export process for job: ${job.id}`);
       processExportJob(job.id).catch(error => {
-        console.error(`Export job ${job.id} failed:`, error);
+        console.error(`❌ Export job ${job.id} failed in background:`, error);
+        console.error(`❌ Error stack:`, error.stack);
       });
 
       res.json({ job });
     } catch (error) {
-      console.error("Error starting export:", error);
+      console.error("❌ Error starting export:", error);
+      console.error("❌ Error stack:", error.stack);
       res.status(500).json({ message: "Failed to start export" });
     }
   });
@@ -994,7 +1035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Single contact export endpoint
-  app.get('/api/contacts/:id/export', isAuthenticated, requireRole(['admin', 'editor', 'viewer']), async (req: any, res) => {
+  app.get('/api/contacts/:id/export', isAuthenticated, requireRole(['admin', 'editor', 'viewer']), async (req: any, res: any) => {
     try {
       const contactId = req.params.id;
       console.log(`Contact export initiated by user: ${req.currentUser.email} for contact: ${contactId}`);
@@ -1479,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add contact to user's network
-  app.post('/api/networks', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+  app.post('/api/networks', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res: any) => {
     try {
       const networkData = insertUserNetworkSchema.parse({
         ...req.body,
@@ -1504,7 +1545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update network (notes)
-  app.put('/api/networks/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+  app.put('/api/networks/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res: any) => {
     try {
       const networkId = req.params.id;
       const updateData = updateUserNetworkSchema.parse(req.body);
@@ -1530,7 +1571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Remove contact from user's network
-  app.delete('/api/networks/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+  app.delete('/api/networks/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res: any) => {
     try {
       const networkId = req.params.id;
 
@@ -1552,7 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check if contact is in user's network
-  app.get('/api/networks/check/:contactId', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+  app.get('/api/networks/check/:contactId', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res: any) => {
     try {
       const contactId = req.params.contactId;
       const network = await storage.getUserNetwork(req.currentUser.id, contactId);
