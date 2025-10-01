@@ -129,15 +129,16 @@ async function processExportJob(jobId: string) {
     // Start streaming export
     const writeStream = fs.createWriteStream(filePath);
 
-    // CSV Headers - including all requested fields
+    // CSV Headers - updated to separate public and volunteer data, remove unwanted columns
     const headers = [
-      'System ID', 'First Name', 'Middle Name', 'Last Name', 'Full Name', 'Suffix',
-      'Date of Birth', 'Age', 'Gender', 'Party Affiliation',
-      'Street Address', 'City', 'State', 'ZIP Code', 'County', 'Precinct', 'District',
+      'System ID', 'First Name', 'Middle Name', 'Last Name', 'Full Name',
+      'Date of Birth', 'Party Affiliation',
+      'Street Address', 'City', 'State', 'ZIP Code', 'Precinct', 'District',
       'House District', 'Senate District', 'Commission District', 'School Board District',
-      'Voter ID', 'Registration Date', 'Voter Status', 'Vote History', 'Last Voted Date',
+      'Voter ID', 'Registration Date', 'Voter Status',
       'Supporter Status', 'Volunteer Likelihood', 'Notes',
-      'Primary Phone', 'All Phone Numbers', 'Primary Email', 'All Email Addresses',
+      'Primary Phone', 'Public Phone Numbers', 'Volunteer-Added Phone Numbers',
+      'Primary Email', 'Public Email Addresses', 'Volunteer-Added Email Addresses',
       'Address Source', 'Created At', 'Updated At', 'Created By', 'Last Updated By'
     ];
 
@@ -174,16 +175,12 @@ async function processExportJob(jobId: string) {
           contact.middleName || '',
           contact.lastName || '',
           contact.fullName || '',
-          contact.suffix || '',
           formatDateForCSV(contact.dateOfBirth),
-          contact.age || '',
-          contact.gender || '',
           contact.party || '',
           contact.streetAddress || '',
           contact.city || '',
           contact.state || '',
           contact.zipCode || '',
-          contact.county || '',
           contact.precinct || '',
           contact.district || '',
           contact.houseDistrict || '',
@@ -193,15 +190,15 @@ async function processExportJob(jobId: string) {
           contact.voterId || '',
           formatDateForCSV(contact.registrationDate),
           contact.voterStatus || '',
-          contact.voteHistory || '',
-          formatDateForCSV(contact.lastVotedDate),
           contact.supporterStatus || '',
           contact.volunteerLikeliness || '',
           contact.notes || '',
           contact.primaryPhone || '',
-          contact.allPhones || '',
+          contact.publicPhoneNumbers || '',
+          contact.volunteerPhoneNumbers || '',
           contact.primaryEmail || '',
-          contact.allEmails || '',
+          contact.publicEmailAddresses || '',
+          contact.volunteerEmailAddresses || '',
           contact.addressSource || '',
           formatDateForCSV(contact.createdAt),
           formatDateForCSV(contact.updatedAt),

@@ -1239,7 +1239,9 @@ export class DatabaseStorage implements IStorage {
           contactId: contactPhones.contactId,
           phoneNumber: contactPhones.phoneNumber,
           phoneType: contactPhones.phoneType,
-          isPrimary: contactPhones.isPrimary
+          isPrimary: contactPhones.isPrimary,
+          isBaselineData: contactPhones.isBaselineData,
+          isManuallyAdded: contactPhones.isManuallyAdded
         })
         .from(contactPhones)
         .where(inArray(contactPhones.contactId, contactIds));
@@ -1250,7 +1252,9 @@ export class DatabaseStorage implements IStorage {
           contactId: contactEmails.contactId,
           email: contactEmails.email,
           emailType: contactEmails.emailType,
-          isPrimary: contactEmails.isPrimary
+          isPrimary: contactEmails.isPrimary,
+          isBaselineData: contactEmails.isBaselineData,
+          isManuallyAdded: contactEmails.isManuallyAdded
         })
         .from(contactEmails)
         .where(inArray(contactEmails.contactId, contactIds));
@@ -1278,6 +1282,13 @@ export class DatabaseStorage implements IStorage {
         const contactPhones = phonesMap.get(contact.id) || [];
         const contactEmails = emailsMap.get(contact.id) || [];
 
+        // Separate public and volunteer-added data
+        const publicPhones = contactPhones.filter(p => p.isBaselineData);
+        const volunteerPhones = contactPhones.filter(p => p.isManuallyAdded);
+
+        const publicEmails = contactEmails.filter(e => e.isBaselineData);
+        const volunteerEmails = contactEmails.filter(e => e.isManuallyAdded);
+
         const primaryPhone = contactPhones.find(p => p.isPrimary)?.phoneNumber ||
                             contactPhones[0]?.phoneNumber || '';
         const primaryEmail = contactEmails.find(e => e.isPrimary)?.email ||
@@ -1286,12 +1297,22 @@ export class DatabaseStorage implements IStorage {
         const allPhones = contactPhones.map(p => `${p.phoneNumber} (${p.phoneType})`).join(', ');
         const allEmails = contactEmails.map(e => `${e.email} (${e.emailType})`).join(', ');
 
+        // Create separated phone and email columns
+        const publicPhoneNumbers = publicPhones.map(p => p.phoneNumber).join(', ');
+        const volunteerPhoneNumbers = volunteerPhones.map(p => p.phoneNumber).join(', ');
+        const publicEmailAddresses = publicEmails.map(e => e.email).join(', ');
+        const volunteerEmailAddresses = volunteerEmails.map(e => e.email).join(', ');
+
         return {
           ...contact,
           primaryPhone,
           primaryEmail,
           allPhones,
-          allEmails
+          allEmails,
+          publicPhoneNumbers,
+          volunteerPhoneNumbers,
+          publicEmailAddresses,
+          volunteerEmailAddresses
         };
       });
 
