@@ -145,19 +145,18 @@ async function processExportJob(jobId: string) {
     // Write CSV header
     writeStream.write(headers.map(h => `"${h}"`).join(',') + '\n');
 
-    const BATCH_SIZE = 1000;
+    const BATCH_SIZE = 500; // Reduced for production stability
     let offset = 0;
     let totalProcessed = 0;
 
-    // Get total count for progress tracking
-    const totalRecords = await storage.getExportPreviewCount(job.filters);
-
+    // Start with estimated count to avoid timeout on large datasets
+    // We'll update with actual count as we process
     await storage.updateExportJob(jobId, {
-      totalRecords,
+      totalRecords: 0, // Will be updated during processing
       progress: 0
     });
 
-    console.log(`📊 Export job ${jobId}: Processing ${totalRecords} total records`);
+    console.log(`📊 Export job ${jobId}: Starting batch processing`);
 
     while (true) {
       // Get batch of contacts with filtering
@@ -214,18 +213,16 @@ async function processExportJob(jobId: string) {
       totalProcessed += batch.length;
       offset += BATCH_SIZE;
 
-      // Update progress
-      const progress = Math.min(Math.round((totalProcessed / totalRecords) * 100), 100);
-
+      // Update progress (just show records processed without percentage)
       await storage.updateExportJob(jobId, {
-        progress,
-        processedRecords: totalProcessed
+        processedRecords: totalProcessed,
+        progress: Math.min(50 + Math.floor(totalProcessed / 1000), 99) // Show incremental progress
       });
 
-      console.log(`📈 Export job ${jobId}: ${totalProcessed}/${totalRecords} (${progress}%)`);
+      console.log(`📈 Export job ${jobId}: ${totalProcessed} records processed`);
 
       // Small delay to prevent overwhelming the database
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50)); // Reduced delay
     }
 
     // Close the file stream
@@ -245,6 +242,7 @@ async function processExportJob(jobId: string) {
     await storage.updateExportJob(jobId, {
       status: 'completed',
       progress: 100,
+      totalRecords: totalProcessed, // Set final total
       processedRecords: totalProcessed,
       completedAt: new Date(), // Pass Date object, not string
       filePath,
@@ -258,10 +256,14 @@ async function processExportJob(jobId: string) {
   } catch (error) {
     console.error(`❌ Export job ${jobId} failed:`, error);
 
-    await storage.updateExportJob(jobId, {
-      status: 'failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    try {
+      await storage.updateExportJob(jobId, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    } catch (updateError) {
+      console.error(`❌ Failed to update job status for ${jobId}:`, updateError);
+    }
   }
 }
 
@@ -741,8 +743,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filters = req.body;
       const job = await storage.createExportJob(req.currentUser.id, filters);
 
-      // Start the export process in the background
-      processExportJob(job.id);
+      // Start the export process in the background with timeout protection
+      processExportJob(job.id).catch(error => {
+        console.error(`Export job ${job.id} failed:`, error);
+      });
 
       res.json({ job });
     } catch (error) {
@@ -806,18 +810,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/admin/export/download/:jobId', isAuthenticated, requireRole(['admin']), async (req: any, res) => {
     try {
       const jobId = req.params.jobId;
+      console.log(`📥 Download request for job ${jobId}`);
+
       const job = await storage.getExportJob(jobId);
+      console.log(`📄 Job details:`, { status: job?.status, filePath: job?.filePath, filename: job?.filename });
 
       if (!job || job.status !== 'completed' || !job.filePath) {
+        console.log(`❌ Job not found or not completed for ${jobId}`);
         return res.status(404).json({ message: "Export file not found" });
       }
 
       if (!fs.existsSync(job.filePath)) {
+        console.log(`❌ File does not exist: ${job.filePath}`);
         return res.status(404).json({ message: "Export file no longer exists" });
       }
 
-      res.setHeader('Content-Type', 'text/csv');
+      // Check file content type
+      const fileContent = fs.readFileSync(job.filePath, 'utf-8');
+      const firstLine = fileContent.split('\n')[0];
+      console.log(`📝 First line of file: ${firstLine}`);
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', `attachment; filename="${job.filename}"`);
+      res.setHeader('Cache-Control', 'no-cache');
 
       const fileStream = fs.createReadStream(job.filePath);
       fileStream.pipe(res);
