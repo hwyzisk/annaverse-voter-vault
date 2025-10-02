@@ -621,7 +621,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    // Delete user and all related data in transaction
+    // Delete user and clean up all related data in transaction
     await db.transaction(async (tx) => {
       // Delete audit logs created by this user
       await tx.delete(auditLogs).where(eq(auditLogs.userId, userId));
@@ -631,6 +631,30 @@ export class DatabaseStorage implements IStorage {
 
       // Delete export jobs created by this user
       await tx.delete(exportJobs).where(eq(exportJobs.createdBy, userId));
+
+      // Set foreign keys to NULL for contacts created/updated by this user
+      await tx.update(contacts)
+        .set({ createdBy: null })
+        .where(eq(contacts.createdBy, userId));
+
+      await tx.update(contacts)
+        .set({ lastUpdatedBy: null })
+        .where(eq(contacts.lastUpdatedBy, userId));
+
+      // Set foreign keys to NULL for contact phones created by this user
+      await tx.update(contactPhones)
+        .set({ createdBy: null })
+        .where(eq(contactPhones.createdBy, userId));
+
+      // Set foreign keys to NULL for contact emails created by this user
+      await tx.update(contactEmails)
+        .set({ createdBy: null })
+        .where(eq(contactEmails.createdBy, userId));
+
+      // Set foreign keys to NULL for system settings updated by this user
+      await tx.update(systemSettings)
+        .set({ updatedBy: null })
+        .where(eq(systemSettings.updatedBy, userId));
 
       // Finally delete the user
       await tx.delete(users).where(eq(users.id, userId));
