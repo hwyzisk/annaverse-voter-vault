@@ -5,6 +5,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, User as UserIcon, Settings, LogOut, Menu } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface HeaderProps {
   user: User;
@@ -16,6 +17,7 @@ interface HeaderProps {
 
 export default function Header({ user, onProfileClick, onNotificationClick, onMobileMenuClick, showMobileMenu }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
+  const { theme } = useTheme();
 
   const formatName = (user: User) => {
     if (user.firstName && user.lastName) {
@@ -74,7 +76,16 @@ export default function Header({ user, onProfileClick, onNotificationClick, onMo
                       {getInitials(user)}
                     </AvatarFallback>
                   </Avatar>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge
+                    variant="secondary"
+                    className={`text-xs ${
+                      theme === 'glass' && user.role === 'admin'
+                        ? 'bg-purple-600 text-white hover:bg-purple-700'
+                        : theme === 'light' && user.role === 'admin'
+                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                        : ''
+                    }`}
+                  >
                     {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                   </Badge>
                   <ChevronDown className="w-3 h-3 text-muted-foreground" />
@@ -93,7 +104,16 @@ export default function Header({ user, onProfileClick, onNotificationClick, onMo
                   <div className="flex-1 space-y-1">
                     <p className="text-sm font-medium leading-none">{formatName(user)}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge
+                      variant="secondary"
+                      className={`text-xs ${
+                        theme === 'glass' && user.role === 'admin'
+                          ? 'bg-purple-600 text-white hover:bg-purple-700'
+                          : theme === 'light' && user.role === 'admin'
+                          ? 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                          : ''
+                      }`}
+                    >
                       {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                     </Badge>
                   </div>

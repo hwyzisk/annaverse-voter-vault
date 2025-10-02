@@ -8,7 +8,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme, type Theme } from "@/contexts/ThemeContext";
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  variant?: 'default' | 'minimal';
+}
+
+export function ThemeToggle({ variant = 'default' }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
 
   const themes: { value: Theme; label: string; icon: React.ReactNode }[] = [
@@ -18,6 +22,34 @@ export function ThemeToggle() {
   ];
 
   const currentTheme = themes.find(t => t.value === theme);
+
+  if (variant === 'minimal') {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full justify-start px-2 py-2 h-auto text-sm text-muted-foreground hover:text-foreground hover:bg-accent"
+          >
+            {currentTheme?.icon}
+            <span className="ml-3">{currentTheme?.label}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className={theme === 'glass' ? 'glass-card' : ''}>
+          {themes.map((themeOption) => (
+            <DropdownMenuItem
+              key={themeOption.value}
+              onClick={() => setTheme(themeOption.value)}
+              className={`flex items-center gap-2 ${theme === themeOption.value ? 'bg-accent' : ''}`}
+            >
+              {themeOption.icon}
+              {themeOption.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
 
   return (
     <DropdownMenu>

@@ -467,42 +467,43 @@ export default function OurImpact() {
             ) : null}
           </div>
         </div>
-
-        {/* Modals */}
-        {showUserProfile && (
-          <UserProfileModal
-            user={user}
-            open={showUserProfile}
-            onOpenChange={setShowUserProfile}
-          />
-        )}
-
-        {showAdminDashboard && (
-          <AdminDashboard
-            open={showAdminDashboard}
-            onOpenChange={setShowAdminDashboard}
-          />
-        )}
-
-        {/* Mobile Navigation */}
-        {isMobile && (
-          <Sheet open={showMobileNav} onOpenChange={setShowMobileNav}>
-            <SheetContent side="left" className="w-64 p-0">
-              <SheetHeader className="p-6 border-b">
-                <SheetTitle>Navigation</SheetTitle>
-              </SheetHeader>
-              <Sidebar
-                user={user}
-                onAdminClick={() => {
-                  setShowAdminDashboard(true);
-                  setShowMobileNav(false);
-                }}
-                mobile={true}
-              />
-            </SheetContent>
-          </Sheet>
-        )}
       </main>
+
+      {/* Modals */}
+      {showUserProfile && (
+        <UserProfileModal
+          user={user}
+          open={showUserProfile}
+          onOpenChange={setShowUserProfile}
+        />
+      )}
+
+      {showAdminDashboard && user.role === 'admin' && (
+        <AdminDashboard
+          isOpen={showAdminDashboard}
+          onClose={() => setShowAdminDashboard(false)}
+          user={user}
+        />
+      )}
+
+      {/* Mobile Navigation */}
+      {isMobile && (
+        <Sheet open={showMobileNav} onOpenChange={setShowMobileNav}>
+          <SheetContent side="left" className="w-64 p-0">
+            <SheetHeader className="p-6 border-b">
+              <SheetTitle>Navigation</SheetTitle>
+            </SheetHeader>
+            <Sidebar
+              user={user}
+              onAdminClick={() => {
+                setShowAdminDashboard(true);
+                setShowMobileNav(false);
+              }}
+              mobile={true}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

@@ -151,32 +151,34 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
             </p>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mb-2">
+        <p className="text-xs text-muted-foreground mb-4">
           Last login: <span data-testid="text-last-login">
             {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : 'Never'}
           </span>
         </p>
-        <div className="flex justify-between items-center mb-2">
-          <ThemeToggle />
-        </div>
-        {user.role === 'admin' && (
+        <div className="space-y-1">
+          <ThemeToggle variant="minimal" />
+          {user.role === 'admin' && (
+            <Button
+              variant="ghost"
+              onClick={onAdminClick}
+              className="w-full justify-start px-2 py-2 h-auto text-sm text-muted-foreground hover:text-foreground hover:bg-accent"
+              data-testid="button-admin-tools"
+            >
+              <Settings className="w-4 h-4 mr-3" />
+              <span>Admin Tools</span>
+            </Button>
+          )}
           <Button
             variant="ghost"
-            onClick={onAdminClick}
-            className="w-full justify-start p-0 h-auto text-sm text-muted-foreground hover:text-foreground mb-2"
-            data-testid="button-admin-tools"
+            onClick={handleLogout}
+            className="w-full justify-start px-2 py-2 h-auto text-sm text-muted-foreground hover:text-foreground hover:bg-accent"
+            data-testid="button-logout"
           >
-            <Settings className="w-4 h-4 mr-2" />Admin Tools
+            <LogOut className="w-4 h-4 mr-3" />
+            <span>Sign Out</span>
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className="w-full justify-start p-0 h-auto text-sm text-muted-foreground hover:text-foreground"
-          data-testid="button-logout"
-        >
-          <LogOut className="w-4 h-4 mr-2" />Sign Out
-        </Button>
+        </div>
       </div>
     </aside>
   );
