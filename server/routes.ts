@@ -119,33 +119,8 @@ async function processExportJob(jobId: string) {
 
     // Create exports directory if it doesn't exist
     const exportDir = path.join(process.cwd(), 'exports');
-    console.log(`📁 Current working directory: ${process.cwd()}`);
-    console.log(`📁 Export directory path: ${exportDir}`);
-    console.log(`📁 Process user: uid=${process.getuid ? process.getuid() : 'N/A'}, gid=${process.getgid ? process.getgid() : 'N/A'}`);
-    console.log(`📁 Directory exists: ${fs.existsSync(exportDir)}`);
-
     if (!fs.existsSync(exportDir)) {
-      console.log(`📁 Attempting to create export directory: ${exportDir}`);
-      try {
-        fs.mkdirSync(exportDir, { recursive: true });
-        console.log(`✅ Export directory created successfully`);
-      } catch (mkdirError) {
-        console.error(`❌ Failed to create export directory:`, mkdirError);
-        throw mkdirError;
-      }
-    } else {
-      // Check directory permissions
-      try {
-        const stats = fs.statSync(exportDir);
-        console.log(`📁 Directory permissions: mode=${stats.mode.toString(8)}, uid=${stats.uid}, gid=${stats.gid}`);
-
-        // Test write access
-        fs.accessSync(exportDir, fs.constants.W_OK);
-        console.log(`✅ Directory is writable`);
-      } catch (accessError) {
-        console.error(`❌ Directory access check failed:`, accessError);
-        throw accessError;
-      }
+      fs.mkdirSync(exportDir, { recursive: true });
     }
 
     // Generate filename

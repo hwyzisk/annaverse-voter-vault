@@ -621,7 +621,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, userId));
+    // Delete user and all related data in transaction
+    await db.transaction(async (tx) => {
+      // Delete audit logs created by this user
+      await tx.delete(auditLogs).where(eq(auditLogs.userId, userId));
+
+      // Delete user networks (contacts saved by this user)
+      await tx.delete(userNetworks).where(eq(userNetworks.userId, userId));
+
+      // Delete export jobs created by this user
+      await tx.delete(exportJobs).where(eq(exportJobs.createdBy, userId));
+
+      // Finally delete the user
+      await tx.delete(users).where(eq(users.id, userId));
+    });
   }
 
   async updateUserRole(userId: string, role: string): Promise<User> {
