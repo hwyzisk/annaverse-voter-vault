@@ -621,43 +621,58 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(userId: string): Promise<void> {
+    console.log(`🗑️ Deleting user ${userId} and all related data...`);
+
     // Delete user and clean up all related data in transaction
     await db.transaction(async (tx) => {
       // Delete audit logs created by this user
-      await tx.delete(auditLogs).where(eq(auditLogs.userId, userId));
+      console.log(`🗑️ Deleting audit logs for user ${userId}...`);
+      const deletedAuditLogs = await tx.delete(auditLogs).where(eq(auditLogs.userId, userId)).returning();
+      console.log(`✅ Deleted ${deletedAuditLogs.length} audit logs`);
 
       // Delete user networks (contacts saved by this user)
-      await tx.delete(userNetworks).where(eq(userNetworks.userId, userId));
+      console.log(`🗑️ Deleting user networks for user ${userId}...`);
+      const deletedNetworks = await tx.delete(userNetworks).where(eq(userNetworks.userId, userId)).returning();
+      console.log(`✅ Deleted ${deletedNetworks.length} user networks`);
 
       // Delete export jobs created by this user
-      await tx.delete(exportJobs).where(eq(exportJobs.createdBy, userId));
+      console.log(`🗑️ Deleting export jobs for user ${userId}...`);
+      const deletedExports = await tx.delete(exportJobs).where(eq(exportJobs.createdBy, userId)).returning();
+      console.log(`✅ Deleted ${deletedExports.length} export jobs`);
 
       // Set foreign keys to NULL for contacts created/updated by this user
+      console.log(`🗑️ Nullifying contact.createdBy for user ${userId}...`);
       await tx.update(contacts)
         .set({ createdBy: null })
         .where(eq(contacts.createdBy, userId));
 
+      console.log(`🗑️ Nullifying contact.lastUpdatedBy for user ${userId}...`);
       await tx.update(contacts)
         .set({ lastUpdatedBy: null })
         .where(eq(contacts.lastUpdatedBy, userId));
 
       // Set foreign keys to NULL for contact phones created by this user
+      console.log(`🗑️ Nullifying contactPhones.createdBy for user ${userId}...`);
       await tx.update(contactPhones)
         .set({ createdBy: null })
         .where(eq(contactPhones.createdBy, userId));
 
       // Set foreign keys to NULL for contact emails created by this user
+      console.log(`🗑️ Nullifying contactEmails.createdBy for user ${userId}...`);
       await tx.update(contactEmails)
         .set({ createdBy: null })
         .where(eq(contactEmails.createdBy, userId));
 
       // Set foreign keys to NULL for system settings updated by this user
+      console.log(`🗑️ Nullifying systemSettings.updatedBy for user ${userId}...`);
       await tx.update(systemSettings)
         .set({ updatedBy: null })
         .where(eq(systemSettings.updatedBy, userId));
 
       // Finally delete the user
+      console.log(`🗑️ Deleting user ${userId}...`);
       await tx.delete(users).where(eq(users.id, userId));
+      console.log(`✅ User ${userId} deleted successfully`);
     });
   }
 
