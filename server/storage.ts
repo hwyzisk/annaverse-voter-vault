@@ -953,6 +953,58 @@ export class DatabaseStorage implements IStorage {
         .from(contacts)
         .where(eq(contacts.volunteerLikeliness, 'confirmed-volunteer'));
 
+      // Get volunteers by party
+      const volunteersByParty = await db
+        .select({
+          party: contacts.party,
+          count: count()
+        })
+        .from(contacts)
+        .where(eq(contacts.volunteerLikeliness, 'confirmed-volunteer'))
+        .groupBy(contacts.party);
+
+      const totalConfirmedVolunteers = confirmedVolunteersResult.count;
+      const volunteersByPartyWithPercentage = volunteersByParty.map(item => ({
+        party: item.party || 'Unknown',
+        count: item.count,
+        percentage: totalConfirmedVolunteers > 0 ? (item.count / totalConfirmedVolunteers) * 100 : 0
+      }));
+
+      // Get volunteers by age (calculated from birth date)
+      const volunteersByAge = await db
+        .select({
+          ageRange: sql<string>`
+            CASE
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 30 THEN '18-29'
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 40 THEN '30-39'
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 50 THEN '40-49'
+              WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 65 THEN '50-64'
+              ELSE '65+'
+            END
+          `,
+          count: count()
+        })
+        .from(contacts)
+        .where(and(
+          eq(contacts.volunteerLikeliness, 'confirmed-volunteer'),
+          sql`${contacts.dateOfBirth} IS NOT NULL`
+        ))
+        .groupBy(sql`
+          CASE
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 30 THEN '18-29'
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 40 THEN '30-39'
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 50 THEN '40-49'
+            WHEN EXTRACT(YEAR FROM AGE(${contacts.dateOfBirth})) < 65 THEN '50-64'
+            ELSE '65+'
+          END
+        `);
+
+      const volunteersByAgeWithPercentage = volunteersByAge.map(item => ({
+        ageRange: item.ageRange,
+        count: item.count,
+        percentage: totalConfirmedVolunteers > 0 ? (item.count / totalConfirmedVolunteers) * 100 : 0
+      }));
+
       // Get phone numbers and emails added BY VOLUNTEERS (not baseline data)
       const [phoneNumbersResult] = await db
         .select({ count: count() })
@@ -1002,7 +1054,11 @@ export class DatabaseStorage implements IStorage {
           byParty: supportersByPartyWithPercentage,
           byAge: supportersByAgeWithPercentage
         },
-        confirmedVolunteers: confirmedVolunteersResult.count,
+        confirmedVolunteers: {
+          total: totalConfirmedVolunteers,
+          byParty: volunteersByPartyWithPercentage,
+          byAge: volunteersByAgeWithPercentage
+        },
         phoneNumbersAdded: phoneNumbersResult.count,
         emailAddressesAdded: emailAddressesResult.count,
         activeVolunteers: activeVolunteersResult.count
@@ -1019,7 +1075,11 @@ export class DatabaseStorage implements IStorage {
           byParty: [],
           byAge: []
         },
-        confirmedVolunteers: 0,
+        confirmedVolunteers: {
+          total: 0,
+          byParty: [],
+          byAge: []
+        },
         phoneNumbersAdded: 0,
         emailAddressesAdded: 0,
         activeVolunteers: 0

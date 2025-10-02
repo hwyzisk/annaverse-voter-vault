@@ -36,7 +36,11 @@ interface ImpactData {
     byParty: { party: string; count: number; percentage: number }[];
     byAge: { ageRange: string; count: number; percentage: number }[];
   };
-  confirmedVolunteers: number;
+  confirmedVolunteers: {
+    total: number;
+    byParty: { party: string; count: number; percentage: number }[];
+    byAge: { ageRange: string; count: number; percentage: number }[];
+  };
   phoneNumbersAdded: number;
   emailAddressesAdded: number;
   activeVolunteers: number;
@@ -259,24 +263,24 @@ export default function OurImpact() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <div className="text-3xl font-bold">
-                          {impactData?.confirmedVolunteers?.toLocaleString() || 0}
+                          {impactData?.confirmedVolunteers?.total?.toLocaleString() || 0}
                         </div>
                         <div className="text-right">
                           <div className="text-sm text-muted-foreground">100 goal</div>
                           <div className="text-xs text-muted-foreground">
-                            {impactData?.confirmedVolunteers ?
-                              Math.min((impactData.confirmedVolunteers / 100) * 100, 100).toFixed(1) : 0}% Complete
+                            {impactData?.confirmedVolunteers?.total ?
+                              Math.min((impactData.confirmedVolunteers.total / 100) * 100, 100).toFixed(1) : 0}% Complete
                           </div>
                         </div>
                       </div>
 
                       <Progress
-                        value={impactData?.confirmedVolunteers ?
-                          Math.min((impactData.confirmedVolunteers / 100) * 100, 100) : 0}
+                        value={impactData?.confirmedVolunteers?.total ?
+                          Math.min((impactData.confirmedVolunteers.total / 100) * 100, 100) : 0}
                         className="h-2"
                       />
 
-                      {/* Party Breakdown - using same data structure for volunteers */}
+                      {/* Party Breakdown - using volunteer data */}
                       <Collapsible
                         open={expandedBreakdowns.has('volunteers-party')}
                         onOpenChange={() => toggleBreakdown('volunteers-party')}
@@ -291,11 +295,11 @@ export default function OurImpact() {
                           </Button>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="space-y-2 mb-4">
-                          {impactData?.confirmedSupporters?.byParty?.map((party) => (
+                          {impactData?.confirmedVolunteers?.byParty?.map((party) => (
                             <div key={party.party} className="space-y-1">
                               <div className="flex justify-between text-sm">
                                 <span>{party.party}</span>
-                                <span>{Math.round(party.count * 0.2)} ({party.percentage.toFixed(1)}%)</span>
+                                <span>{party.count} ({party.percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="w-full bg-secondary rounded-full h-2">
                                 <div
@@ -308,7 +312,7 @@ export default function OurImpact() {
                         </CollapsibleContent>
                       </Collapsible>
 
-                      {/* Age Breakdown - using same data structure for volunteers */}
+                      {/* Age Breakdown - using volunteer data */}
                       <Collapsible
                         open={expandedBreakdowns.has('volunteers-age')}
                         onOpenChange={() => toggleBreakdown('volunteers-age')}
@@ -323,11 +327,11 @@ export default function OurImpact() {
                           </Button>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="space-y-2 mt-2">
-                          {impactData?.confirmedSupporters?.byAge?.map((age) => (
+                          {impactData?.confirmedVolunteers?.byAge?.map((age) => (
                             <div key={age.ageRange} className="space-y-1">
                               <div className="flex justify-between text-sm">
                                 <span>{age.ageRange}</span>
-                                <span>{Math.round(age.count * 0.2)} ({age.percentage.toFixed(1)}%)</span>
+                                <span>{age.count} ({age.percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="w-full bg-secondary rounded-full h-2">
                                 <div
