@@ -637,7 +637,7 @@ export class DatabaseStorage implements IStorage {
 
       // Delete export jobs created by this user
       console.log(`🗑️ Deleting export jobs for user ${userId}...`);
-      const deletedExports = await tx.delete(exportJobs).where(eq(exportJobs.createdBy, userId)).returning();
+      const deletedExports = await tx.delete(exportJobs).where(eq(exportJobs.userId, userId)).returning();
       console.log(`✅ Deleted ${deletedExports.length} export jobs`);
 
       // Set foreign keys to NULL for contacts created/updated by this user
