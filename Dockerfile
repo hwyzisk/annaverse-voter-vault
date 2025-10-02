@@ -31,6 +31,9 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nodejs
 
+# Create exports directory with proper permissions
+RUN mkdir -p /app/exports && chown -R nodejs:nodejs /app/exports
+
 # Copy production dependencies
 COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 
