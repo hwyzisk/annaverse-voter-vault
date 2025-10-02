@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useLocation } from "wouter";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -28,6 +29,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ isOpen, onClose, user, isFullPage = false }: AdminDashboardProps) {
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("users");
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -424,7 +426,7 @@ export default function AdminDashboard({ isOpen, onClose, user, isFullPage = fal
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.location.href = '/admin/export'}
+              onClick={() => setLocation('/admin/export')}
               data-testid="button-export-data"
             >
               <i className="fas fa-download mr-2"></i>Export Data

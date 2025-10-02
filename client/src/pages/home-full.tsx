@@ -11,10 +11,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Vote, Search, Settings, LogOut, User as UserIcon, Heart, TrendingUp } from "lucide-react";
 import type { Contact } from "@shared/schema";
+import { useLocation } from "wouter";
 
 export default function HomeFull() {
   const { user, isLoading } = useAuth();
   const isMobile = useIsMobile();
+  const [, setLocation] = useLocation();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -70,7 +72,7 @@ export default function HomeFull() {
                 variant="ghost"
                 className="w-full justify-start"
                 onClick={() => {
-                  window.location.href = '/';
+                  setLocation('/');
                   setShowMobileNav(false);
                 }}
               >
@@ -82,7 +84,7 @@ export default function HomeFull() {
                   variant="ghost"
                   className="w-full justify-start"
                   onClick={() => {
-                    window.location.href = '/network';
+                    setLocation('/network');
                     setShowMobileNav(false);
                   }}
                 >
@@ -94,7 +96,7 @@ export default function HomeFull() {
                 variant="ghost"
                 className="w-full justify-start"
                 onClick={() => {
-                  window.location.href = '/our-impact';
+                  setLocation('/our-impact');
                   setShowMobileNav(false);
                 }}
               >

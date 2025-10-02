@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Vote, Search, Users, ClipboardList, Settings, LogOut, User as UserIcon, Heart, TrendingUp, MessageSquare, Share2 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { useTheme } from "@/contexts/ThemeContext";
+import { Link, useLocation } from "wouter";
 
 interface SidebarProps {
   user: User;
@@ -10,7 +11,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ user, onAdminClick }: SidebarProps) {
-  const currentPath = window.location.pathname;
+  const [currentPath] = useLocation();
   const { theme } = useTheme();
 
   const handleLogout = () => {
@@ -50,7 +51,7 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
     <aside className="w-64 bg-card border-r border-border flex flex-col">
       <div className="p-6 border-b border-border">
         {/* Replace old icon + text with theme-aware logo */}
-        <a href="/" className="block" aria-label="Home">
+        <Link href="/" className="block" aria-label="Home">
           <div className="w-full h-16 md:h-20 flex items-center justify-center">
             <img
               src={logoSrc}
@@ -65,66 +66,66 @@ export default function Sidebar({ user, onAdminClick }: SidebarProps) {
               }}
             />
           </div>
-        </a>
+        </Link>
       </div>
       
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
           <li>
-            <a
+            <Link
               href="/"
               className={getLinkClassName('/')}
               data-testid="link-search"
             >
               <Search className="w-5 h-5" />
               <span>Search Contacts</span>
-            </a>
+            </Link>
           </li>
 
           {(user.role === 'admin' || user.role === 'editor') && (
             <li>
-              <a
+              <Link
                 href="/network"
                 className={getLinkClassName('/network')}
                 data-testid="link-network"
               >
                 <Heart className="w-5 h-5" />
                 <span>My Network</span>
-              </a>
+              </Link>
             </li>
           )}
 
           <li>
-            <a
+            <Link
               href="/our-impact"
               className={getLinkClassName('/our-impact')}
               data-testid="link-our-impact"
             >
               <TrendingUp className="w-5 h-5" />
               <span>Our Impact</span>
-            </a>
+            </Link>
           </li>
 
           <li>
-            <a
+            <Link
               href="/talking-points"
               className={getLinkClassName('/talking-points')}
               data-testid="link-talking-points"
             >
               <MessageSquare className="w-5 h-5" />
               <span>Talking Points</span>
-            </a>
+            </Link>
           </li>
 
           <li>
-            <a
+            <Link
               href="/share"
               className={getLinkClassName('/share')}
               data-testid="link-share"
             >
               <Share2 className="w-5 h-5" />
               <span>Share Anna's Story</span>
-            </a>
+            </Link>
           </li>
         </ul>
       </nav>

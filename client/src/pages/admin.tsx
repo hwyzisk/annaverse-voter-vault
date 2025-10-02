@@ -2,10 +2,12 @@ import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import AdminDashboard from "@/components/admin/AdminDashboard";
+import { useLocation } from "wouter";
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'admin')) {
@@ -15,10 +17,10 @@ export default function Admin() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/";
+        setLocation("/");
       }, 1000);
     }
-  }, [user, isLoading, toast]);
+  }, [user, isLoading, toast, setLocation]);
 
   if (isLoading) {
     return (

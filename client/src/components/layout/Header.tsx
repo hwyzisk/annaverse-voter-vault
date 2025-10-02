@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, User as UserIcon, Settings, LogOut, Menu } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useLocation } from "wouter";
 
 interface HeaderProps {
   user: User;
