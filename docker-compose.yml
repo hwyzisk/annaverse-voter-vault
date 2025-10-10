@@ -1,3 +1,11 @@
+# Updated AnnaVerse Docker Compose (without nginx container)
+# nginx is now handled by host-level nginx for unified configuration
+#
+# Changes from original:
+# 1. Removed nginx service entirely
+# 2. Added port mapping 3000:3000 for app service
+# 3. App now accessible on host at localhost:3000
+
 services:
   # PostgreSQL Database
   postgres:
@@ -24,7 +32,7 @@ services:
   # AnnaVerse Application
   app:
     build:
-      context: .
+      context: ../../Downloads
       dockerfile: Dockerfile
     container_name: annaverse_app
     restart: unless-stopped
@@ -39,6 +47,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # ADDED: Expose port to host for nginx
+    ports:
+      - "3000:3000"
     networks:
       - annaverse_network
     volumes:
@@ -50,28 +61,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: annaverse_nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - nginx_cache:/var/cache/nginx
-      - nginx_logs:/var/log/nginx
-    depends_on:
-      - app
-    networks:
-      - annaverse_network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # REMOVED: nginx service - now handled by host nginx
 
   # Optional: Redis for session storage (uncomment if needed)
   # redis:
@@ -96,10 +86,7 @@ volumes:
     driver: local
   app_uploads:
     driver: local
-  nginx_cache:
-    driver: local
-  nginx_logs:
-    driver: local
+  # Removed: nginx_cache, nginx_logs
   # redis_data:
   #   driver: local
 
