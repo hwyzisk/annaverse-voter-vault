@@ -21,8 +21,8 @@ import { nanoid } from 'nanoid';
 import { createHash } from 'crypto';
 import { db } from '../db';
 import { sql, eq, and, or, inArray } from 'drizzle-orm';
-import type { InsertContact, InsertContactPhone, Contact } from '@shared/schema';
-import { contacts, contactPhones } from '@shared/schema';
+import type { InsertContact, InsertContactPhone, InsertContactEmail, Contact } from '@shared/schema';
+import { contacts, contactPhones, contactEmails } from '@shared/schema';
 
 interface OptimizedVoterExcelRow {
   VoterID: string | number;
@@ -41,6 +41,8 @@ interface OptimizedVoterExcelRow {
   Sex?: string;
   Party?: string;
   Telephone_Number?: string;
+  Vote_by_Mail_Email_Address?: string;
+  Public_Email_Address?: string;
   Voter_Status?: string;
   Congressional_District?: string | number;
   House_District?: string | number;
@@ -54,6 +56,7 @@ interface OptimizedVoterExcelRow {
 interface ProcessedContact {
   contact: InsertContact;
   phone?: InsertContactPhone;
+  emails: InsertContactEmail[];
   originalRowNumber: number;
   hashedVoterId: string;
   isUpdate: boolean;
@@ -490,6 +493,40 @@ export class OptimizedExcelService {
           continue;
         }
 
+        // Extract and deduplicate email addresses
+        const emailsToAdd: InsertContactEmail[] = [];
+        const emailSet = new Set<string>();
+
+        // Process Vote by Mail Email
+        if (row.Vote_by_Mail_Email_Address) {
+          const vbmEmail = String(row.Vote_by_Mail_Email_Address).trim().toLowerCase();
+          if (vbmEmail && vbmEmail !== 'NULL' && vbmEmail.includes('@')) {
+            emailSet.add(vbmEmail);
+          }
+        }
+
+        // Process Public Email
+        if (row.Public_Email_Address) {
+          const publicEmail = String(row.Public_Email_Address).trim().toLowerCase();
+          if (publicEmail && publicEmail !== 'NULL' && publicEmail.includes('@')) {
+            emailSet.add(publicEmail);
+          }
+        }
+
+        // Convert set to array of email objects
+        const uniqueEmails = Array.from(emailSet);
+        uniqueEmails.forEach((email, index) => {
+          emailsToAdd.push({
+            contactId: '', // Will be set after contact creation
+            email: email,
+            emailType: 'personal',
+            isPrimary: index === 0, // First email is primary
+            isBaselineData: true,
+            isManuallyAdded: false,
+            createdBy: userId
+          });
+        });
+
         validRecords.push({
           contact: {
             ...normalizedContact,
@@ -504,6 +541,7 @@ export class OptimizedExcelService {
             isManuallyAdded: false,
             createdBy: userId
           } : undefined,
+          emails: emailsToAdd,
           // No voter ID alias needed
           originalRowNumber: actualRowNumber,
           hashedVoterId,
@@ -532,6 +570,12 @@ export class OptimizedExcelService {
       const existingContact = existingContactsMap.get(record.hashedVoterId);
 
       if (existingContact) {
+        // Filter out emails that already exist in the database
+        const newEmails = record.emails.filter(email =>
+          !existingContact.existingEmails.includes(email.email.toLowerCase())
+        );
+        record.emails = newEmails;
+
         // 🔍 Detect which fields actually changed and are safe to update
         const changedFields = await this.detectChangeableFields(
           record.contact,
@@ -539,7 +583,8 @@ export class OptimizedExcelService {
           overwriteUserData
         );
 
-        if (changedFields.length > 0) {
+        // Consider it an update if fields changed OR new emails need to be added
+        if (changedFields.length > 0 || record.emails.length > 0) {
           record.isUpdate = true;
           record.existingId = existingContact.id;
           record.changedFields = changedFields;
@@ -563,7 +608,7 @@ export class OptimizedExcelService {
 
             // Prepare related data with returned IDs
             const phonesToInsert: InsertContactPhone[] = [];
-            // No aliases needed
+            const emailsToInsert: InsertContactEmail[] = [];
 
             insertedContacts.forEach((contact, index) => {
               const record = recordsToCreate[index];
@@ -575,7 +620,13 @@ export class OptimizedExcelService {
                 });
               }
 
-              // No voter ID aliases needed
+              // Add emails for this contact
+              record.emails.forEach(email => {
+                emailsToInsert.push({
+                  ...email,
+                  contactId: contact.id
+                });
+              });
 
               globalProcessedVoterIds.add(record.hashedVoterId);
             });
@@ -585,30 +636,50 @@ export class OptimizedExcelService {
               await tx.insert(contactPhones).values(phonesToInsert);
             }
 
-            // No aliases to insert
+            if (emailsToInsert.length > 0) {
+              await tx.insert(contactEmails).values(emailsToInsert);
+            }
 
             created += insertedContacts.length;
           }
 
           // 🔄 Bulk update existing contacts
           if (recordsToUpdate.length > 0) {
+            const emailsToInsertForUpdates: InsertContactEmail[] = [];
+
             for (const record of recordsToUpdate) {
-              if (!record.existingId || !record.changedFields) continue;
+              if (!record.existingId) continue;
 
-              // Build update object with only changed fields
-              const updateData: any = {};
-              for (const field of record.changedFields) {
-                updateData[field] = (record.contact as any)[field];
+              // Update contact fields if there are changes
+              if (record.changedFields && record.changedFields.length > 0) {
+                // Build update object with only changed fields
+                const updateData: any = {};
+                for (const field of record.changedFields) {
+                  updateData[field] = (record.contact as any)[field];
+                }
+                updateData.lastUpdatedBy = userId;
+                updateData.lastPublicUpdate = new Date();
+                updateData.updatedAt = new Date();
+
+                await tx.update(contacts)
+                  .set(updateData)
+                  .where(eq(contacts.id, record.existingId));
               }
-              updateData.lastUpdatedBy = userId;
-              updateData.lastPublicUpdate = new Date();
-              updateData.updatedAt = new Date();
 
-              await tx.update(contacts)
-                .set(updateData)
-                .where(eq(contacts.id, record.existingId));
+              // Add new emails for this contact (already filtered to exclude existing ones)
+              record.emails.forEach(email => {
+                emailsToInsertForUpdates.push({
+                  ...email,
+                  contactId: record.existingId!
+                });
+              });
 
               globalProcessedVoterIds.add(record.hashedVoterId);
+            }
+
+            // Bulk insert new emails for updated contacts
+            if (emailsToInsertForUpdates.length > 0) {
+              await tx.insert(contactEmails).values(emailsToInsertForUpdates);
             }
 
             updated += recordsToUpdate.length;
@@ -648,9 +719,9 @@ export class OptimizedExcelService {
   }
 
   /**
-   * 🔍 Bulk lookup existing contacts (replaces N+1 queries with 1 query!)
+   * 🔍 Bulk lookup existing contacts and their emails (replaces N+1 queries with 2 queries!)
    */
-  private async bulkLookupExistingContacts(hashedVoterIds: string[]): Promise<Map<string, Contact>> {
+  private async bulkLookupExistingContacts(hashedVoterIds: string[]): Promise<Map<string, Contact & { existingEmails: string[] }>> {
     if (hashedVoterIds.length === 0) return new Map();
 
     // Generate all possible systemIds from hashed voter IDs
@@ -662,8 +733,27 @@ export class OptimizedExcelService {
       .from(contacts)
       .where(inArray(contacts.systemId, systemIds));
 
+    // Get all contact IDs for email lookup
+    const contactIds = existingContacts.map(c => c.id);
+
+    // Bulk fetch all existing emails for these contacts
+    const existingEmails = contactIds.length > 0
+      ? await db
+          .select()
+          .from(contactEmails)
+          .where(inArray(contactEmails.contactId, contactIds))
+      : [];
+
+    // Group emails by contact ID
+    const emailsByContactId = new Map<string, string[]>();
+    existingEmails.forEach(emailRecord => {
+      const emails = emailsByContactId.get(emailRecord.contactId) || [];
+      emails.push(emailRecord.email.toLowerCase());
+      emailsByContactId.set(emailRecord.contactId, emails);
+    });
+
     // Create lookup map by hashed voter ID
-    const contactMap = new Map<string, Contact>();
+    const contactMap = new Map<string, Contact & { existingEmails: string[] }>();
 
     existingContacts.forEach(contact => {
       // Extract hash from systemId (VV-12345678 -> 12345678)
@@ -675,7 +765,10 @@ export class OptimizedExcelService {
       );
 
       if (matchingHashedVoterId) {
-        contactMap.set(matchingHashedVoterId, contact);
+        contactMap.set(matchingHashedVoterId, {
+          ...contact,
+          existingEmails: emailsByContactId.get(contact.id) || []
+        });
       }
     });
 
