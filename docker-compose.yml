@@ -32,7 +32,7 @@ services:
   # AnnaVerse Application
   app:
     build:
-      context: ../../Downloads
+      context: .
       dockerfile: Dockerfile
     container_name: annaverse_app
     restart: unless-stopped
@@ -57,7 +57,7 @@ services:
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
-      timeout: 10s
+    timeout: 10s
       retries: 3
       start_period: 40s
 
