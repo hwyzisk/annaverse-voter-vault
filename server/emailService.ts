@@ -74,7 +74,7 @@ export const EmailTemplates = {
   registrationConfirmation: (userEmail: string, userName: string) => ({
     to: userEmail,
     from: {
-      email: 'noreply@annaverseapp.com',
+      email: 'hello@annaverseapp.com',
       name: 'AnnaVerse Team'
     },
     replyTo: 'support@annaverseapp.com',
@@ -109,7 +109,7 @@ export const EmailTemplates = {
   adminNotification: (adminEmail: string, userName: string, userEmail: string, userPhone: string) => ({
     to: adminEmail,
     from: {
-      email: 'noreply@annaverseapp.com',
+      email: 'hello@annaverseapp.com',
       name: 'AnnaVerse Team'
     },
     replyTo: 'support@annaverseapp.com',
@@ -141,7 +141,7 @@ export const EmailTemplates = {
   approvalNotification: (userEmail: string, userName: string, role: string) => ({
     to: userEmail,
     from: {
-      email: 'noreply@annaverseapp.com',
+      email: 'hello@annaverseapp.com',
       name: 'AnnaVerse Team'
     },
     replyTo: 'support@annaverseapp.com',
@@ -178,7 +178,7 @@ export const EmailTemplates = {
   rejectionNotification: (userEmail: string, userName: string, reason?: string) => ({
     to: userEmail,
     from: {
-      email: 'noreply@annaverseapp.com',
+      email: 'hello@annaverseapp.com',
       name: 'AnnaVerse Team'
     },
     subject: 'AnnaVerse Registration Update',
@@ -201,7 +201,7 @@ export const EmailTemplates = {
   passwordReset: (userEmail: string, userName: string, resetToken: string) => ({
     to: userEmail,
     from: {
-      email: 'noreply@annaverseapp.com',
+      email: 'hello@annaverseapp.com',
       name: 'AnnaVerse Team'
     },
     subject: 'Reset Your AnnaVerse Password',
