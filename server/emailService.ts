@@ -32,29 +32,17 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     const fromEmail = typeof params.from === 'string' ? params.from : params.from.email;
     const fromName = typeof params.from === 'string' ? '' : params.from.name;
     
-    const request = mailjet.post('send', { version: 'v3.1' });
+    const request = mailjet.post('send', { version: 'v3' });
     
     await request.request({
-      Messages: [
-        {
-          From: {
-            Email: fromEmail,
-            Name: fromName
-          },
-          To: [
-            {
-              Email: params.to
-            }
-          ],
-          Subject: params.subject,
-          TextPart: params.text || '',
-          HTMLPart: params.html,
-          ReplyTo: params.replyTo ? {
-            Email: params.replyTo
-          } : undefined,
-          Headers: params.headers
-        }
-      ]
+      FromEmail: fromEmail,
+      FromName: fromName,
+      Subject: params.subject,
+      'Text-part': params.text || '',
+      'Html-part': params.html,
+      Recipients: [{ Email: params.to }],
+      ReplyTo: params.replyTo,
+      Headers: params.headers
     });
     
     console.log(`✅ Email sent successfully to ${params.to || 'unknown recipient'}: ${params.subject}`);
