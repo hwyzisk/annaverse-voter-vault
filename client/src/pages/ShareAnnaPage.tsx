@@ -38,17 +38,17 @@ export default function ShareAnnaPage() {
     {
       id: "text1",
       title: "Text Option 1",
-      content: "Hey! I just started getting involved with Anna Eskamani's campaign here in Orlando. She's done so much for families, small businesses, and protecting solar energy. Can I count on you to support her too?"
+      content: "Hey! I just started getting involved with Anna Eskamani's 2027 Mayoral campaign here in Orlando. She's done so much for families, small businesses, and our environment. I'm working with the campaign's new relationship tool to identify people in my network that support Anna for Mayor. Can I identify you as a supporter?"
     },
     {
       id: "text2",
       title: "Text Option 2",
-      content: "Hi! Wanted to share that I'm supporting Anna Eskamani for Mayor. She's always put people over politics and even donated her salary to help families in need. Would love for you to join me in supporting her!"
+      content: "Hi! Wanted to share that I'm supporting Anna Eskamani for Mayor. She's always put people over politics and even donated her salary to help families in need. I'm working with the campaign to identify people in my network that Anna can count on to support and vote in 2027. I would love for you to join me in supporting her!"
     },
     {
       id: "text3",
       title: "Text Option 3",
-      content: "Hey there 👋 I've been following Anna Eskamani's campaign and love how she focuses on housing, jobs, and helping neighbors. Every vote will matter in this election — will you join me in supporting her?"
+      content: "Hey there 👋 I've been supporting Anna Eskamani's campaign for Mayor because she focuses on housing, jobs, and helping neighbors. Every vote will matter in this election — will you join me in supporting her and commit to voting in 2027?"
     }
   ];
 
