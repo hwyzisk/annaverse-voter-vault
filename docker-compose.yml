@@ -41,7 +41,8 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-annaverse_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-annaverse}?sslmode=disable
       SESSION_SECRET: ${SESSION_SECRET}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      MAILJET_API_KEY: 92a0a0ad886cd6d776f4bc62194fda2b
+      MAILJET_SECRET_KEY: 5d777670fbf7237569f46155f7d8e3bc
       REPLIT_DB_URL: ${REPLIT_DB_URL:-}
       DOMAIN: ${DOMAIN:-localhost}
     depends_on:

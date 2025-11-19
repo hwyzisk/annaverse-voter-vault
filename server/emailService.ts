@@ -1,12 +1,15 @@
-// SendGrid email service integration - Referenced from javascript_sendgrid blueprint
-import { MailService } from '@sendgrid/mail';
+// Mailjet email service integration
+import Mailjet from 'node-mailjet';
 
-// Initialize SendGrid service - handle missing API key gracefully
-const mailService = new MailService();
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
+// Initialize Mailjet service - handle missing API keys gracefully
+let mailjet: any = null;
+if (process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY) {
+  mailjet = new Mailjet({
+    apiKey: process.env.MAILJET_API_KEY,
+    apiSecret: process.env.MAILJET_SECRET_KEY
+  });
 } else {
-  console.warn('SENDGRID_API_KEY not found - email functionality will be disabled');
+  console.warn('MAILJET_API_KEY or MAILJET_SECRET_KEY not found - email functionality will be disabled');
 }
 
 interface EmailParams {
@@ -20,27 +23,46 @@ interface EmailParams {
 }
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.warn('Email send skipped - SENDGRID_API_KEY not configured');
+  if (!mailjet) {
+    console.warn('Email send skipped - MAILJET_API_KEY or MAILJET_SECRET_KEY not configured');
     return false;
   }
   
   try {
-    await mailService.send({
-      to: params.to,
-      from: params.from,
-      replyTo: params.replyTo,
-      subject: params.subject,
-      text: params.text || '', // Provide empty string if undefined
-      html: params.html,
-      headers: params.headers,
+    const fromEmail = typeof params.from === 'string' ? params.from : params.from.email;
+    const fromName = typeof params.from === 'string' ? '' : params.from.name;
+    
+    const request = mailjet.post('send', { version: 'v3.1' });
+    
+    await request.request({
+      Messages: [
+        {
+          From: {
+            Email: fromEmail,
+            Name: fromName
+          },
+          To: [
+            {
+              Email: params.to
+            }
+          ],
+          Subject: params.subject,
+          TextPart: params.text || '',
+          HTMLPart: params.html,
+          ReplyTo: params.replyTo ? {
+            Email: params.replyTo
+          } : undefined,
+          Headers: params.headers
+        }
+      ]
     });
+    
     console.log(`✅ Email sent successfully to ${params.to || 'unknown recipient'}: ${params.subject}`);
     return true;
   } catch (error) {
-    console.error('❌ SendGrid email error:', error);
+    console.error('❌ Mailjet email error:', error);
     if (error.response?.body) {
-      console.error('SendGrid response body:', error.response.body);
+      console.error('Mailjet response body:', error.response.body);
     }
     return false;
   }
