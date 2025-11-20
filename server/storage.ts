@@ -249,28 +249,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchContacts(
-    nameFilters: { firstName?: string; middleName?: string; lastName?: string; } = {}, 
-    filters?: any, 
-    limit = 20, 
+    nameFilters: { firstName?: string; middleName?: string; lastName?: string; } = {},
+    filters?: any,
+    limit = 20,
     offset = 0
   ): Promise<{ contacts: Contact[], total: number }> {
     let whereConditions = [];
-    
+
     // Handle individual name field searches
     const nameConditions = [];
-    
+
     if (nameFilters.firstName?.trim()) {
       nameConditions.push(ilike(contacts.firstName, `%${nameFilters.firstName.trim()}%`));
     }
-    
+
     if (nameFilters.middleName?.trim()) {
       nameConditions.push(ilike(contacts.middleName, `%${nameFilters.middleName.trim()}%`));
     }
-    
+
     if (nameFilters.lastName?.trim()) {
       nameConditions.push(ilike(contacts.lastName, `%${nameFilters.lastName.trim()}%`));
     }
-    
+
     // If any name filters are provided, add them as AND conditions (all must match)
     if (nameConditions.length > 0) {
       whereConditions.push(and(...nameConditions));
@@ -338,90 +338,15 @@ export class DatabaseStorage implements IStorage {
 
     const whereClause = whereConditions.length > 0 ? and(...whereConditions) : undefined;
 
+    // OPTIMIZED: Fetch contacts and total count without expensive subqueries
     const [contactsResult, totalResult] = await Promise.all([
-      whereClause 
-        ? db.select({
-            id: contacts.id,
-            systemId: contacts.systemId,
-            fullName: contacts.fullName,
-            firstName: contacts.firstName,
-            middleName: contacts.middleName,
-            lastName: contacts.lastName,
-            dateOfBirth: contacts.dateOfBirth,
-            streetAddress: contacts.streetAddress,
-            city: contacts.city,
-            state: contacts.state,
-            zipCode: contacts.zipCode,
-            district: contacts.district,
-            precinct: contacts.precinct,
-            houseDistrict: contacts.houseDistrict,
-            senateDistrict: contacts.senateDistrict,
-            commissionDistrict: contacts.commissionDistrict,
-            schoolBoardDistrict: contacts.schoolBoardDistrict,
-            voterId: contacts.voterId,
-            registrationDate: contacts.registrationDate,
-            party: contacts.party,
-            voterStatus: contacts.voterStatus,
-            supporterStatus: contacts.supporterStatus,
-            volunteerLikeliness: contacts.volunteerLikeliness,
-            notes: contacts.notes,
-            createdAt: contacts.createdAt,
-            updatedAt: contacts.updatedAt,
-            createdBy: contacts.createdBy,
-            lastUpdatedBy: contacts.lastUpdatedBy,
-            addressSource: contacts.addressSource,
-            isActive: contacts.isActive,
-            lastPublicUpdate: contacts.lastPublicUpdate,
-            phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
-            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`,
-            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM contact_phones WHERE contact_id = ${contacts.id} AND is_manually_added = true)`,
-            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM contact_emails WHERE contact_id = ${contacts.id} AND is_manually_added = true)`,
-            baselinePhoneCount: sql<number>`(SELECT COUNT(*) FROM contact_phones WHERE contact_id = ${contacts.id} AND is_baseline_data = true)`,
-            baselineEmailCount: sql<number>`(SELECT COUNT(*) FROM contact_emails WHERE contact_id = ${contacts.id} AND is_baseline_data = true)`
-          }).from(contacts)
+      whereClause
+        ? db.select().from(contacts)
             .where(whereClause)
             .limit(limit)
             .offset(offset)
             .orderBy(desc(contacts.updatedAt))
-        : db.select({
-            id: contacts.id,
-            systemId: contacts.systemId,
-            fullName: contacts.fullName,
-            firstName: contacts.firstName,
-            middleName: contacts.middleName,
-            lastName: contacts.lastName,
-            dateOfBirth: contacts.dateOfBirth,
-            streetAddress: contacts.streetAddress,
-            city: contacts.city,
-            state: contacts.state,
-            zipCode: contacts.zipCode,
-            district: contacts.district,
-            precinct: contacts.precinct,
-            houseDistrict: contacts.houseDistrict,
-            senateDistrict: contacts.senateDistrict,
-            commissionDistrict: contacts.commissionDistrict,
-            schoolBoardDistrict: contacts.schoolBoardDistrict,
-            voterId: contacts.voterId,
-            registrationDate: contacts.registrationDate,
-            party: contacts.party,
-            voterStatus: contacts.voterStatus,
-            supporterStatus: contacts.supporterStatus,
-            volunteerLikeliness: contacts.volunteerLikeliness,
-            notes: contacts.notes,
-            createdAt: contacts.createdAt,
-            updatedAt: contacts.updatedAt,
-            createdBy: contacts.createdBy,
-            lastUpdatedBy: contacts.lastUpdatedBy,
-            addressSource: contacts.addressSource,
-            isActive: contacts.isActive,
-            lastPublicUpdate: contacts.lastPublicUpdate,
-            phoneCount: sql<number>`(SELECT COUNT(*) FROM ${contactPhones} WHERE ${contactPhones.contactId} = ${contacts.id})`,
-            emailCount: sql<number>`(SELECT COUNT(*) FROM ${contactEmails} WHERE ${contactEmails.contactId} = ${contacts.id})`,
-            manualPhoneCount: sql<number>`(SELECT COUNT(*) FROM contact_phones WHERE contact_id = ${contacts.id} AND is_manually_added = true)`,
-            manualEmailCount: sql<number>`(SELECT COUNT(*) FROM contact_emails WHERE contact_id = ${contacts.id} AND is_manually_added = true)`,
-            baselinePhoneCount: sql<number>`(SELECT COUNT(*) FROM contact_phones WHERE contact_id = ${contacts.id} AND is_baseline_data = true)`,
-            baselineEmailCount: sql<number>`(SELECT COUNT(*) FROM contact_emails WHERE contact_id = ${contacts.id} AND is_baseline_data = true)`
-          }).from(contacts)
+        : db.select().from(contacts)
             .limit(limit)
             .offset(offset)
             .orderBy(desc(contacts.updatedAt)),
@@ -430,8 +355,63 @@ export class DatabaseStorage implements IStorage {
         : db.select({ count: count() }).from(contacts)
     ]);
 
+    // If no contacts found, return early
+    if (contactsResult.length === 0) {
+      return {
+        contacts: [],
+        total: totalResult[0].count
+      };
+    }
+
+    // OPTIMIZED: Get all phone/email counts in separate efficient queries using GROUP BY
+    const contactIds = contactsResult.map(c => c.id);
+
+    // Get phone counts grouped by contact ID
+    const phoneCounts = await db
+      .select({
+        contactId: contactPhones.contactId,
+        totalCount: count(),
+        manualCount: sql<number>`COUNT(*) FILTER (WHERE ${contactPhones.isManuallyAdded} = true)`,
+        baselineCount: sql<number>`COUNT(*) FILTER (WHERE ${contactPhones.isBaselineData} = true)`
+      })
+      .from(contactPhones)
+      .where(inArray(contactPhones.contactId, contactIds))
+      .groupBy(contactPhones.contactId);
+
+    // Get email counts grouped by contact ID
+    const emailCounts = await db
+      .select({
+        contactId: contactEmails.contactId,
+        totalCount: count(),
+        manualCount: sql<number>`COUNT(*) FILTER (WHERE ${contactEmails.isManuallyAdded} = true)`,
+        baselineCount: sql<number>`COUNT(*) FILTER (WHERE ${contactEmails.isBaselineData} = true)`
+      })
+      .from(contactEmails)
+      .where(inArray(contactEmails.contactId, contactIds))
+      .groupBy(contactEmails.contactId);
+
+    // Create lookup maps for O(1) access
+    const phoneCountMap = new Map(phoneCounts.map(p => [p.contactId, p]));
+    const emailCountMap = new Map(emailCounts.map(e => [e.contactId, e]));
+
+    // Merge counts into contact results
+    const enrichedContacts = contactsResult.map(contact => {
+      const phoneData = phoneCountMap.get(contact.id);
+      const emailData = emailCountMap.get(contact.id);
+
+      return {
+        ...contact,
+        phoneCount: phoneData?.totalCount || 0,
+        emailCount: emailData?.totalCount || 0,
+        manualPhoneCount: phoneData?.manualCount || 0,
+        manualEmailCount: emailData?.manualCount || 0,
+        baselinePhoneCount: phoneData?.baselineCount || 0,
+        baselineEmailCount: emailData?.baselineCount || 0,
+      };
+    });
+
     return {
-      contacts: contactsResult,
+      contacts: enrichedContacts as Contact[],
       total: totalResult[0].count
     };
   }

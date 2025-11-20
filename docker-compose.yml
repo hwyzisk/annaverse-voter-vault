@@ -40,6 +40,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-annaverse_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-annaverse}?sslmode=disable
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       SESSION_SECRET: ${SESSION_SECRET}
       MAILJET_API_KEY: 92a0a0ad886cd6d776f4bc62194fda2b
       MAILJET_SECRET_KEY: 5d777670fbf7237569f46155f7d8e3bc
@@ -47,6 +48,8 @@ services:
       DOMAIN: ${DOMAIN:-localhost}
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     # ADDED: Expose port to host for nginx
     ports:
@@ -64,32 +67,33 @@ services:
 
   # REMOVED: nginx service - now handled by host nginx
 
-  # Optional: Redis for session storage (uncomment if needed)
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: annaverse_redis
-  #   restart: unless-stopped
-  #   command: redis-server --requirepass ${REDIS_PASSWORD}
-  #   environment:
-  #     REDIS_PASSWORD: ${REDIS_PASSWORD}
-  #   volumes:
-  #     - redis_data:/data
-  #   networks:
-  #     - annaverse_network
-  #   healthcheck:
-  #     test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-  #     interval: 10s
-  #     timeout: 3s
-  #     retries: 5
+  # Redis for session storage - improves performance by offloading sessions from PostgreSQL
+  redis:
+    image: redis:7-alpine
+    container_name: annaverse_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - annaverse_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--auth", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres_data:
     driver: local
   app_uploads:
     driver: local
-  # Removed: nginx_cache, nginx_logs
-  # redis_data:
-  #   driver: local
+  redis_data:
+    driver: local
 
 networks:
   annaverse_network:
