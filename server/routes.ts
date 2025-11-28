@@ -6,7 +6,7 @@ import { searchService } from "./services/searchService";
 import { optimizedExcelService } from "./services/optimizedExcelService";
 import { auditService } from "./services/auditService";
 import { AuthService } from "./authService";
-import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertUserNetworkSchema, updateUserNetworkSchema } from "@shared/schema";
+import { insertContactSchema, updateContactSchema, insertContactPhoneSchema, insertContactEmailSchema, insertContactSocialSchema, insertUserNetworkSchema, updateUserNetworkSchema } from "@shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import fs from "fs";
@@ -534,20 +534,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get related data
-      const [phones, emails, auditLogs] = await Promise.all([
+      const [phones, emails, socials, auditLogs] = await Promise.all([
         storage.getContactPhones(contact.id),
         storage.getContactEmails(contact.id),
+        storage.getContactSocials(contact.id),
         storage.getAuditLogs(contact.id, undefined, 50)
       ]);
 
       // Data is already in camelCase format from storage layer
       const mappedPhones = phones;
       const mappedEmails = emails;
+      const mappedSocials = socials;
 
       res.json({
         ...contact,
         phones: mappedPhones,
         emails: mappedEmails,
+        socials: mappedSocials,
         auditLogs
       });
     } catch (error) {
@@ -676,6 +679,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing email:", error);
       res.status(500).json({ message: "Failed to remove email" });
+    }
+  });
+
+  // Contact social media
+  app.post('/api/contacts/:id/socials', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+    try {
+      const socialData = insertContactSocialSchema.parse({
+        ...req.body,
+        contactId: req.params.id,
+        createdBy: req.currentUser.id,
+        isManuallyAdded: true
+      });
+
+      const social = await storage.addContactSocial(socialData);
+
+      // Log audit
+      await auditService.logSocialAdd(social, req.currentUser.id);
+
+      res.json(social);
+    } catch (error) {
+      console.error("Error adding social media:", error);
+      res.status(500).json({ message: "Failed to add social media" });
+    }
+  });
+
+  app.patch('/api/socials/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req: any, res) => {
+    try {
+      const updates = z.object({
+        platform: z.enum(['facebook', 'instagram', 'twitter', 'tiktok', 'linkedin', 'youtube', 'threads', 'other']).optional(),
+        handle: z.string().optional(),
+        isPrimary: z.boolean().optional(),
+      }).parse(req.body);
+
+      const social = await storage.updateContactSocial(req.params.id, updates);
+      res.json(social);
+    } catch (error) {
+      console.error("Error updating social media:", error);
+      res.status(500).json({ message: "Failed to update social media" });
+    }
+  });
+
+  app.delete('/api/socials/:id', isAuthenticated, requireRole(['admin', 'editor']), async (req, res) => {
+    try {
+      await storage.removeContactSocial(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error removing social media:", error);
+      res.status(500).json({ message: "Failed to remove social media" });
     }
   });
 
@@ -1599,6 +1650,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error checking user network:', error);
       res.status(500).json({ message: 'Failed to check network status' });
+    }
+  });
+
+  // Get all users who have this contact in their network
+  app.get('/api/networks/users/:contactId', isAuthenticated, async (req: any, res: any) => {
+    try {
+      const contactId = req.params.contactId;
+      const users = await storage.getUsersWithContactInNetwork(contactId);
+      res.json(users);
+    } catch (error) {
+      console.error('Error getting users with contact in network:', error);
+      res.status(500).json({ message: 'Failed to get network users' });
     }
   });
 

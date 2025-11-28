@@ -16,8 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { getPartyColor, formatParty } from "@/lib/utils";
-import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History, Lock, Heart, HeartOff } from "lucide-react";
-import type { Contact, User, ContactPhone, ContactEmail } from "@shared/schema";
+import { Phone, Mail, Edit, Trash2, Plus, X, ArrowLeft, Download, Check, Undo, History, Lock, Heart, HeartOff, Facebook, Instagram, Twitter, Linkedin, Youtube, AtSign, Globe, Music } from "lucide-react";
+import type { Contact, User, ContactPhone, ContactEmail, ContactSocial } from "@shared/schema";
+import { useAddSocial, useUpdateSocial, useDeleteSocial } from "@/hooks/useSocials";
 
 interface ProfileModalProps {
   contact: Contact;
@@ -29,6 +30,7 @@ interface ProfileModalProps {
 interface ContactDetails extends Contact {
   phones: ContactPhone[];
   emails: ContactEmail[];
+  socials: ContactSocial[];
   auditLogs: any[];
 }
 
@@ -62,6 +64,29 @@ const isValidPhoneNumber = (phone: string) => {
   return numericValue.length === 10;
 };
 
+// Social media platform icons and labels
+const socialIcons: Record<string, any> = {
+  facebook: Facebook,
+  instagram: Instagram,
+  twitter: Twitter,
+  tiktok: Music,
+  linkedin: Linkedin,
+  youtube: Youtube,
+  threads: AtSign,
+  other: Globe
+};
+
+const socialLabels: Record<string, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  twitter: "X (Twitter)",
+  tiktok: "TikTok",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+  threads: "Threads",
+  other: "Other"
+};
+
 export default function ProfileModal({ contact, user, isOpen, onClose }: ProfileModalProps) {
   const [isEditingCampaign, setIsEditingCampaign] = useState(false);
   const [isEditingNotes, setIsEditingNotes] = useState(false);
@@ -71,12 +96,28 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
   const [volunteerLikeliness, setVolunteerLikeliness] = useState(contact.volunteerLikeliness ?? "unknown");
   const [newPhone, setNewPhone] = useState({ phoneNumber: "", phoneType: "mobile" as const });
   const [newEmail, setNewEmail] = useState({ email: "", emailType: "personal" as const });
+  const [newSocial, setNewSocial] = useState({ platform: "facebook" as const, handle: "" });
   const [editingPhone, setEditingPhone] = useState<{ id: string; phoneNumber: string; phoneType: string } | null>(null);
   const [editingEmail, setEditingEmail] = useState<{ id: string; email: string; emailType: string } | null>(null);
+  const [editingSocial, setEditingSocial] = useState<{ id: string; platform: string; handle: string } | null>(null);
 
   // Network state
   const [networkStatus, setNetworkStatus] = useState<{ inNetwork: boolean; networkId?: string }>({ inNetwork: false });
   const [networkLoading, setNetworkLoading] = useState(false);
+
+  // Query to fetch users who have this contact in their network
+  const { data: networkUsers = [] } = useQuery({
+    queryKey: [`/api/networks/users/${contact.id}`],
+    queryFn: async () => {
+      const response = await fetch(`/api/networks/users/${contact.id}`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch network users');
+      return response.json() as Promise<{ id: string; firstName: string | null; lastName: string | null; email: string }[]>;
+    },
+    enabled: isOpen && !!contact.id,
+    staleTime: 30000, // Cache for 30 seconds
+  });
 
   // Validation state
   const [phoneError, setPhoneError] = useState("");
@@ -363,6 +404,11 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     },
   });
 
+  // Social media mutations
+  const addSocialMutation = useAddSocial();
+  const updateSocialMutation = useUpdateSocial();
+  const deleteSocialMutation = useDeleteSocial();
+
   // Alias functionality removed
 
   const handleSaveCampaign = () => {
@@ -469,6 +515,7 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
     ...contact,
     phones: [],
     emails: [],
+    socials: [],
     auditLogs: [],
   };
 
@@ -484,23 +531,44 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
           {/* Mobile Sticky Header */}
           <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 pr-12">
             <div className="flex items-center justify-between pr-2">
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 flex-1 min-w-0">
                 <Button
                   variant="ghost"
                   size="default"
                   onClick={onClose}
-                  className="h-11 w-11 p-0"
+                  className="h-11 w-11 p-0 flex-shrink-0"
                   data-testid="button-close-profile"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <h2 className="text-lg font-semibold truncate" data-testid="text-contact-name">
                     {details.fullName}
                   </h2>
+                  {networkUsers.length > 0 && (
+                    <div className="mt-1 flex items-center gap-1 flex-wrap">
+                      <span className="text-xs text-muted-foreground">In network of:</span>
+                      {networkUsers.slice(0, 2).map((user) => (
+                        <Badge
+                          key={user.id}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {user.firstName && user.lastName
+                            ? `${user.firstName} ${user.lastName}`
+                            : user.email}
+                        </Badge>
+                      ))}
+                      {networkUsers.length > 2 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{networkUsers.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {canEdit && (
                   <Button
                     variant="outline"
@@ -793,6 +861,36 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Public Social Media (if any exist) */}
+                  {(details.socials && details.socials.some((s: any) => s.isBaselineData)) && (
+                    <div className="mb-6">
+                      <Label className="text-base font-medium mb-3 block text-black dark:text-white">
+                        📱 Public Social Media
+                      </Label>
+                      <div className="space-y-3">
+                        {details.socials.filter((social: any) => social.isBaselineData).map((social: any) => {
+                          const Icon = socialIcons[social.platform];
+                          return (
+                            <div key={social.id} className="p-4 bg-muted/30 rounded-lg border-l-4 border-black">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <Icon className="w-4 h-4 text-black dark:text-white" />
+                                  <div>
+                                    <p className="font-medium text-sm">{social.handle}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {socialLabels[social.platform]} {social.isPrimary && '(Primary)'}
+                                    </p>
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-xs">Public Data</Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1100,6 +1198,206 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                           </Button>
                         </div>
                       )}
+
+                      {/* Volunteer Social Media */}
+                      {details.socials && details.socials.filter((social: any) => social.isManuallyAdded).map((social: any) => {
+                        const Icon = socialIcons[social.platform];
+                        return (
+                          <div key={social.id} className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border-l-4 border-green-600">
+                            {editingSocial?.id === social.id ? (
+                              <div className="space-y-3">
+                                <div className="flex items-center space-x-3">
+                                  <Icon className="w-4 h-4 text-green-600" />
+                                  <Input
+                                    type="text"
+                                    value={editingSocial.handle}
+                                    onChange={(e) => setEditingSocial(prev => prev ? { ...prev, handle: e.target.value } : null)}
+                                    placeholder="@username or URL"
+                                    className="flex-1 h-11 text-base"
+                                    data-testid={`input-edit-social-${social.id}`}
+                                  />
+                                </div>
+                                <select
+                                  value={editingSocial.platform}
+                                  onChange={(e) => setEditingSocial(prev => prev ? { ...prev, platform: e.target.value } : null)}
+                                  className="w-full px-3 py-3 border border-input rounded-md h-11 text-base bg-background text-foreground"
+                                >
+                                  <option value="facebook">Facebook</option>
+                                  <option value="instagram">Instagram</option>
+                                  <option value="twitter">X (Twitter)</option>
+                                  <option value="tiktok">TikTok</option>
+                                  <option value="linkedin">LinkedIn</option>
+                                  <option value="youtube">YouTube</option>
+                                  <option value="threads">Threads</option>
+                                  <option value="other">Other</option>
+                                </select>
+                                <div className="flex items-center space-x-2">
+                                  <Button
+                                    variant="default"
+                                    size="default"
+                                    onClick={() => updateSocialMutation.mutate({
+                                      id: social.id,
+                                      contactId: contact.id,
+                                      data: { platform: editingSocial.platform as any, handle: editingSocial.handle }
+                                    }, {
+                                      onSuccess: () => {
+                                        setEditingSocial(null);
+                                        toast({ title: "Social media updated" });
+                                      }
+                                    })}
+                                    disabled={updateSocialMutation.isPending}
+                                    className="flex-1 h-11"
+                                    data-testid={`button-save-social-${social.id}`}
+                                  >
+                                    <Check className="w-4 h-4 mr-2" />
+                                    Save
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="default"
+                                    onClick={() => setEditingSocial(null)}
+                                    className="flex-1 h-11"
+                                    data-testid={`button-cancel-social-${social.id}`}
+                                  >
+                                    <X className="w-4 h-4 mr-2" />
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-3">
+                                    <Icon className="w-4 h-4 text-green-600" />
+                                    <div>
+                                      <p className="text-base font-medium">{social.handle}</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {socialLabels[social.platform]} {social.isPrimary && '• Primary'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Volunteer Added</Badge>
+                                </div>
+                                {canEdit && (
+                                  <div className="flex items-center justify-end space-x-2 mt-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="default"
+                                      onClick={() => setEditingSocial({
+                                        id: social.id,
+                                        platform: social.platform,
+                                        handle: social.handle
+                                      })}
+                                      className="h-11 w-11 p-0"
+                                      data-testid={`button-edit-social-${social.id}`}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="default"
+                                      className="h-11 w-11 p-0 text-destructive"
+                                      onClick={() => deleteSocialMutation.mutate({ id: social.id, contactId: contact.id }, {
+                                        onSuccess: () => {
+                                          toast({ title: "Social media deleted" });
+                                        }
+                                      })}
+                                      disabled={deleteSocialMutation.isPending}
+                                      data-testid={`button-delete-social-${social.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {canEdit && (
+                        <div className="p-4 border border-dashed border-border rounded-lg space-y-3">
+                          <div className="flex items-center space-x-3">
+                            {(() => {
+                              const Icon = socialIcons[newSocial.platform];
+                              return <Icon className="w-4 h-4 text-muted-foreground" />;
+                            })()}
+                            <Input
+                              type="text"
+                              placeholder="@username or URL..."
+                              value={newSocial.handle}
+                              onChange={(e) => setNewSocial(prev => ({ ...prev, handle: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && newSocial.handle.trim()) {
+                                  e.preventDefault();
+                                  addSocialMutation.mutate({
+                                    contactId: contact.id,
+                                    data: newSocial
+                                  }, {
+                                    onSuccess: () => {
+                                      setNewSocial({ platform: "facebook", handle: "" });
+                                      toast({ title: "Social media added" });
+                                    },
+                                    onError: (error) => {
+                                      console.error('Error adding social media:', error);
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to add social media",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  });
+                                }
+                              }}
+                              className="flex-1 h-11 text-base"
+                              data-testid="input-new-social"
+                            />
+                          </div>
+                          <select
+                            value={newSocial.platform}
+                            onChange={(e) => setNewSocial(prev => ({ ...prev, platform: e.target.value as any }))}
+                            className="w-full px-3 py-3 border border-input rounded-md h-11 text-base bg-background text-foreground"
+                          >
+                            <option value="facebook">Facebook</option>
+                            <option value="instagram">Instagram</option>
+                            <option value="twitter">X (Twitter)</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="linkedin">LinkedIn</option>
+                            <option value="youtube">YouTube</option>
+                            <option value="threads">Threads</option>
+                            <option value="other">Other</option>
+                          </select>
+                          <Button
+                            size="default"
+                            onClick={() => {
+                              if (newSocial.handle.trim()) {
+                                addSocialMutation.mutate({
+                                  contactId: contact.id,
+                                  data: newSocial
+                                }, {
+                                  onSuccess: () => {
+                                    setNewSocial({ platform: "facebook", handle: "" });
+                                    toast({ title: "Social media added" });
+                                  },
+                                  onError: (error) => {
+                                    console.error('Error adding social media:', error);
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to add social media",
+                                      variant: "destructive",
+                                    });
+                                  }
+                                });
+                              }
+                            }}
+                            disabled={!newSocial.handle.trim() || addSocialMutation.isPending}
+                            className="w-full h-11"
+                            data-testid="button-add-social"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Social Media
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </AccordionContent>
@@ -1276,6 +1574,22 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                       {details.updatedAt ? new Date(details.updatedAt).toLocaleDateString() : 'Never'}
                     </span>
                   </p>
+                  {networkUsers.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-muted-foreground">In network of:</span>
+                      {networkUsers.map((user) => (
+                        <Badge
+                          key={user.id}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {user.firstName && user.lastName
+                            ? `${user.firstName} ${user.lastName}`
+                            : user.email}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -1590,6 +1904,34 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                         )}
                       </div>
                     </div>
+
+                    {/* Public Social Media */}
+                    {(details.socials && details.socials.filter(social => social.isBaselineData || !social.isManuallyAdded).length > 0) && (
+                      <>
+                        <Separator />
+                        <div>
+                          <Label className="text-muted-foreground">Social Media</Label>
+                          <div className="space-y-2 mt-2">
+                            {details.socials.filter(social => social.isBaselineData || !social.isManuallyAdded).map((social: any) => {
+                              const Icon = socialIcons[social.platform];
+                              return (
+                                <div key={social.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                                  <div className="flex items-center space-x-3">
+                                    <Icon className="w-4 h-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="text-sm font-medium">{social.handle}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {socialLabels[social.platform]} {social.isPrimary && '• Primary'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -1859,6 +2201,199 @@ export default function ProfileModal({ contact, user, isOpen, onClose }: Profile
                               onClick={() => isValidEmail(newEmail.email) && addEmailMutation.mutate(newEmail)}
                               disabled={!isValidEmail(newEmail.email) || addEmailMutation.isPending}
                               data-testid="button-add-email"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Volunteer Social Media */}
+                    <div>
+                      <Label className="text-muted-foreground">Social Media</Label>
+                      <div className="space-y-2 mt-2">
+                        {details.socials && details.socials.filter(social => social.isManuallyAdded).map((social: any) => {
+                          const Icon = socialIcons[social.platform];
+                          return (
+                            <div key={social.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                              {editingSocial?.id === social.id ? (
+                                <div className="flex-1 flex items-center space-x-2">
+                                  <Icon className="w-4 h-4 text-muted-foreground" />
+                                  <Input
+                                    type="text"
+                                    value={editingSocial.handle}
+                                    onChange={(e) => setEditingSocial(prev => prev ? { ...prev, handle: e.target.value } : null)}
+                                    placeholder="@username or URL"
+                                    className="flex-1"
+                                    data-testid={`input-edit-social-${social.id}`}
+                                  />
+                                  <select
+                                    value={editingSocial.platform}
+                                    onChange={(e) => setEditingSocial(prev => prev ? { ...prev, platform: e.target.value } : null)}
+                                    className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                                  >
+                                    <option value="facebook">Facebook</option>
+                                    <option value="instagram">Instagram</option>
+                                    <option value="twitter">X (Twitter)</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="linkedin">LinkedIn</option>
+                                    <option value="youtube">YouTube</option>
+                                    <option value="threads">Threads</option>
+                                    <option value="other">Other</option>
+                                  </select>
+                                  <div className="flex items-center space-x-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => updateSocialMutation.mutate({
+                                        id: social.id,
+                                        contactId: contact.id,
+                                        data: { platform: editingSocial.platform as any, handle: editingSocial.handle }
+                                      }, {
+                                        onSuccess: () => {
+                                          setEditingSocial(null);
+                                          toast({ title: "Social media updated" });
+                                        }
+                                      })}
+                                      disabled={updateSocialMutation.isPending}
+                                      data-testid={`button-save-social-${social.id}`}
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setEditingSocial(null)}
+                                      data-testid={`button-cancel-social-${social.id}`}
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center space-x-3">
+                                    <Icon className="w-4 h-4 text-muted-foreground" />
+                                    <div>
+                                      <p className="text-sm font-medium">{social.handle}</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {socialLabels[social.platform]} {social.isPrimary && '• Primary'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {canEdit && (
+                                    <div className="flex items-center space-x-2">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setEditingSocial({
+                                          id: social.id,
+                                          platform: social.platform,
+                                          handle: social.handle
+                                        })}
+                                        data-testid={`button-edit-social-${social.id}`}
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive"
+                                        onClick={() => deleteSocialMutation.mutate({ id: social.id, contactId: contact.id }, {
+                                          onSuccess: () => {
+                                            toast({ title: "Social media deleted" });
+                                          }
+                                        })}
+                                        disabled={deleteSocialMutation.isPending}
+                                        data-testid={`button-delete-social-${social.id}`}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {canEdit && (
+                          <div className="flex items-center space-x-2 p-3 border border-dashed border-border rounded-md">
+                            {(() => {
+                              const Icon = socialIcons[newSocial.platform];
+                              return <Icon className="w-4 h-4 text-muted-foreground" />;
+                            })()}
+                            <Input
+                              type="text"
+                              placeholder="@username or URL..."
+                              value={newSocial.handle}
+                              onChange={(e) => setNewSocial(prev => ({ ...prev, handle: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && newSocial.handle.trim()) {
+                                  e.preventDefault();
+                                  addSocialMutation.mutate({
+                                    contactId: contact.id,
+                                    data: newSocial
+                                  }, {
+                                    onSuccess: () => {
+                                      setNewSocial({ platform: "facebook", handle: "" });
+                                      toast({ title: "Social media added" });
+                                    },
+                                    onError: (error) => {
+                                      console.error('Error adding social media:', error);
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to add social media",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  });
+                                }
+                              }}
+                              className="flex-1"
+                              data-testid="input-new-social"
+                            />
+                            <select
+                              value={newSocial.platform}
+                              onChange={(e) => setNewSocial(prev => ({ ...prev, platform: e.target.value as any }))}
+                              className="px-3 py-2 border border-input rounded-md bg-background text-foreground"
+                            >
+                              <option value="facebook">Facebook</option>
+                              <option value="instagram">Instagram</option>
+                              <option value="twitter">X (Twitter)</option>
+                              <option value="tiktok">TikTok</option>
+                              <option value="linkedin">LinkedIn</option>
+                              <option value="youtube">YouTube</option>
+                              <option value="threads">Threads</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                if (newSocial.handle.trim()) {
+                                  addSocialMutation.mutate({
+                                    contactId: contact.id,
+                                    data: newSocial
+                                  }, {
+                                    onSuccess: () => {
+                                      setNewSocial({ platform: "facebook", handle: "" });
+                                      toast({ title: "Social media added" });
+                                    },
+                                    onError: (error) => {
+                                      console.error('Error adding social media:', error);
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to add social media",
+                                        variant: "destructive",
+                                      });
+                                    }
+                                  });
+                                }
+                              }}
+                              disabled={!newSocial.handle.trim() || addSocialMutation.isPending}
+                              data-testid="button-add-social"
                             >
                               <Plus className="w-4 h-4" />
                             </Button>

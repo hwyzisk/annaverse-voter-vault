@@ -135,6 +135,25 @@ export const contactEmails = pgTable("contact_emails", {
   createdBy: varchar("created_by").references(() => users.id),
 });
 
+// Contact social media handles
+export const contactSocials = pgTable("contact_socials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contactId: varchar("contact_id").notNull().references(() => contacts.id, { onDelete: 'cascade' }),
+  platform: varchar("platform", {
+    enum: ['facebook', 'instagram', 'twitter', 'tiktok', 'linkedin', 'youtube', 'threads', 'other']
+  }).notNull(),
+  handle: text("handle").notNull(), // Username/handle or full URL
+  isPrimary: boolean("is_primary").default(false),
+  isBaselineData: boolean("is_baseline_data").notNull().default(false), // True for imported baseline data
+  isManuallyAdded: boolean("is_manually_added").notNull().default(false), // True for volunteer-researched data
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  // Indexes for social media lookups
+  index("idx_contact_socials_contact_id").on(table.contactId),
+  index("idx_contact_socials_platform").on(table.platform),
+]);
+
 // Audit log for tracking all changes
 export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -199,6 +218,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   contactsUpdated: many(contacts),
   phonesCreated: many(contactPhones),
   emailsCreated: many(contactEmails),
+  socialsCreated: many(contactSocials),
   auditLogs: many(auditLogs),
   systemSettings: many(systemSettings),
   networks: many(userNetworks),
@@ -211,6 +231,7 @@ export const contactsRelations = relations(contacts, ({ one, many }) => ({
   }),
   phones: many(contactPhones),
   emails: many(contactEmails),
+  socials: many(contactSocials),
   auditLogs: many(auditLogs),
   userNetworks: many(userNetworks),
 }));
@@ -234,6 +255,17 @@ export const contactEmailsRelations = relations(contactEmails, ({ one }) => ({
   }),
   createdByUser: one(users, {
     fields: [contactEmails.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const contactSocialsRelations = relations(contactSocials, ({ one }) => ({
+  contact: one(contacts, {
+    fields: [contactSocials.contactId],
+    references: [contacts.id],
+  }),
+  createdByUser: one(users, {
+    fields: [contactSocials.createdBy],
     references: [users.id],
   }),
 }));
@@ -292,22 +324,29 @@ export const updateContactSchema = insertContactSchema.partial().omit({ id: true
 
 export const insertContactPhoneSchema = createInsertSchema(contactPhones);
 export const insertContactEmailSchema = createInsertSchema(contactEmails);
+export const insertContactSocialSchema = createInsertSchema(contactSocials);
 export const insertAuditLogSchema = createInsertSchema(auditLogs);
 export const insertUserNetworkSchema = createInsertSchema(userNetworks);
 export const updateUserNetworkSchema = createInsertSchema(userNetworks).partial();
 
 // Client-facing schemas (exclude data source flags - backend controls these)
-export const clientInsertContactPhoneSchema = insertContactPhoneSchema.omit({ 
-  isBaselineData: true, 
+export const clientInsertContactPhoneSchema = insertContactPhoneSchema.omit({
+  isBaselineData: true,
   isManuallyAdded: true,
   createdAt: true,
-  createdBy: true 
+  createdBy: true
 });
-export const clientInsertContactEmailSchema = insertContactEmailSchema.omit({ 
-  isBaselineData: true, 
+export const clientInsertContactEmailSchema = insertContactEmailSchema.omit({
+  isBaselineData: true,
   isManuallyAdded: true,
   createdAt: true,
-  createdBy: true 
+  createdBy: true
+});
+export const clientInsertContactSocialSchema = insertContactSocialSchema.omit({
+  isBaselineData: true,
+  isManuallyAdded: true,
+  createdAt: true,
+  createdBy: true
 });
 
 // Registration schema for user signup (excludes auto-generated fields)
@@ -357,6 +396,10 @@ export type ClientInsertContactPhone = z.infer<typeof clientInsertContactPhoneSc
 export type ContactEmail = typeof contactEmails.$inferSelect;
 export type InsertContactEmail = typeof contactEmails.$inferInsert;
 export type ClientInsertContactEmail = z.infer<typeof clientInsertContactEmailSchema>;
+
+export type ContactSocial = typeof contactSocials.$inferSelect;
+export type InsertContactSocial = typeof contactSocials.$inferInsert;
+export type ClientInsertContactSocial = z.infer<typeof clientInsertContactSocialSchema>;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = typeof auditLogs.$inferInsert;

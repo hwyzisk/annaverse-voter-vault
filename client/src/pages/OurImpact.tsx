@@ -23,7 +23,8 @@ import {
   Heart,
   ChevronDown,
   ChevronUp,
-  BarChart3
+  BarChart3,
+  Network
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -44,6 +45,7 @@ interface ImpactData {
   phoneNumbersAdded: number;
   emailAddressesAdded: number;
   activeVolunteers: number;
+  uniqueNetworkContacts: number;
 }
 
 export default function OurImpact() {
@@ -170,17 +172,17 @@ export default function OurImpact() {
                           {impactData?.confirmedSupporters?.total?.toLocaleString() || 0}
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-muted-foreground">500 goal</div>
+                          <div className="text-sm text-muted-foreground">100 goal</div>
                           <div className="text-xs text-muted-foreground">
                             {impactData?.confirmedSupporters?.total ?
-                              Math.min((impactData.confirmedSupporters.total / 500) * 100, 100).toFixed(1) : 0}% Complete
+                              Math.min((impactData.confirmedSupporters.total / 100) * 100, 100).toFixed(1) : 0}% Complete
                           </div>
                         </div>
                       </div>
 
                       <Progress
                         value={impactData?.confirmedSupporters?.total ?
-                          Math.min((impactData.confirmedSupporters.total / 500) * 100, 100) : 0}
+                          Math.min((impactData.confirmedSupporters.total / 100) * 100, 100) : 0}
                         className="h-2"
                       />
 
@@ -266,17 +268,17 @@ export default function OurImpact() {
                           {impactData?.confirmedVolunteers?.total?.toLocaleString() || 0}
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-muted-foreground">100 goal</div>
+                          <div className="text-sm text-muted-foreground">200 goal</div>
                           <div className="text-xs text-muted-foreground">
                             {impactData?.confirmedVolunteers?.total ?
-                              Math.min((impactData.confirmedVolunteers.total / 100) * 100, 100).toFixed(1) : 0}% Complete
+                              Math.min((impactData.confirmedVolunteers.total / 200) * 100, 100).toFixed(1) : 0}% Complete
                           </div>
                         </div>
                       </div>
 
                       <Progress
                         value={impactData?.confirmedVolunteers?.total ?
-                          Math.min((impactData.confirmedVolunteers.total / 100) * 100, 100) : 0}
+                          Math.min((impactData.confirmedVolunteers.total / 200) * 100, 100) : 0}
                         className="h-2"
                       />
 
@@ -348,8 +350,8 @@ export default function OurImpact() {
                 </Card>
               </div>
 
-              {/* Bottom Row - 3 cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Bottom Row - 4 cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {/* Phone Numbers Added */}
                 <Card>
                   <CardHeader>
@@ -365,16 +367,16 @@ export default function OurImpact() {
                           {impactData?.phoneNumbersAdded?.toLocaleString() || 0}
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-muted-foreground">500 goal</div>
+                          <div className="text-sm text-muted-foreground">200 goal</div>
                           <div className="text-xs text-muted-foreground">
                             {impactData?.phoneNumbersAdded ?
-                              Math.min((impactData.phoneNumbersAdded / 500) * 100, 100).toFixed(1) : 0}% Complete
+                              Math.min((impactData.phoneNumbersAdded / 200) * 100, 100).toFixed(1) : 0}% Complete
                           </div>
                         </div>
                       </div>
                       <Progress
                         value={impactData?.phoneNumbersAdded ?
-                          Math.min((impactData.phoneNumbersAdded / 500) * 100, 100) : 0}
+                          Math.min((impactData.phoneNumbersAdded / 200) * 100, 100) : 0}
                         className="h-2"
                       />
                     </div>
@@ -396,16 +398,16 @@ export default function OurImpact() {
                           {impactData?.emailAddressesAdded?.toLocaleString() || 0}
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-muted-foreground">250 goal</div>
+                          <div className="text-sm text-muted-foreground">100 goal</div>
                           <div className="text-xs text-muted-foreground">
                             {impactData?.emailAddressesAdded ?
-                              Math.min((impactData.emailAddressesAdded / 250) * 100, 100).toFixed(1) : 0}% Complete
+                              Math.min((impactData.emailAddressesAdded / 100) * 100, 100).toFixed(1) : 0}% Complete
                           </div>
                         </div>
                       </div>
                       <Progress
                         value={impactData?.emailAddressesAdded ?
-                          Math.min((impactData.emailAddressesAdded / 250) * 100, 100) : 0}
+                          Math.min((impactData.emailAddressesAdded / 100) * 100, 100) : 0}
                         className="h-2"
                       />
                     </div>
@@ -427,16 +429,47 @@ export default function OurImpact() {
                           {impactData?.activeVolunteers?.toLocaleString() || 0}
                         </div>
                         <div className="text-right">
-                          <div className="text-sm text-muted-foreground">50 goal</div>
+                          <div className="text-sm text-muted-foreground">30 goal</div>
                           <div className="text-xs text-muted-foreground">
                             {impactData?.activeVolunteers ?
-                              Math.min((impactData.activeVolunteers / 50) * 100, 100).toFixed(1) : 0}% Complete
+                              Math.min((impactData.activeVolunteers / 30) * 100, 100).toFixed(1) : 0}% Complete
                           </div>
                         </div>
                       </div>
                       <Progress
                         value={impactData?.activeVolunteers ?
-                          Math.min((impactData.activeVolunteers / 50) * 100, 100) : 0}
+                          Math.min((impactData.activeVolunteers / 30) * 100, 100) : 0}
+                        className="h-2"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Total Network Contacts */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Network className="h-5 w-5 text-orange-600" />
+                      Total Network Contacts
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <div className="text-3xl font-bold">
+                          {impactData?.uniqueNetworkContacts?.toLocaleString() || 0}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-muted-foreground">500 goal</div>
+                          <div className="text-xs text-muted-foreground">
+                            {impactData?.uniqueNetworkContacts ?
+                              Math.min((impactData.uniqueNetworkContacts / 500) * 100, 100).toFixed(1) : 0}% Complete
+                          </div>
+                        </div>
+                      </div>
+                      <Progress
+                        value={impactData?.uniqueNetworkContacts ?
+                          Math.min((impactData.uniqueNetworkContacts / 500) * 100, 100) : 0}
                         className="h-2"
                       />
                     </div>

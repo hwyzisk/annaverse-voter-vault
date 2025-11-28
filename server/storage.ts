@@ -3,6 +3,7 @@ import {
   contacts,
   contactPhones,
   contactEmails,
+  contactSocials,
   auditLogs,
   systemSettings,
   userNetworks,
@@ -16,6 +17,8 @@ import {
   type InsertContactPhone,
   type ContactEmail,
   type InsertContactEmail,
+  type ContactSocial,
+  type InsertContactSocial,
   type AuditLog,
   type InsertAuditLog,
   type UserNetwork,
@@ -56,7 +59,12 @@ export interface IStorage {
   addContactEmail(email: InsertContactEmail): Promise<ContactEmail>;
   updateContactEmail(id: string, updates: Partial<InsertContactEmail>): Promise<ContactEmail>;
   removeContactEmail(id: string): Promise<void>;
-  
+
+  getContactSocials(contactId: string): Promise<ContactSocial[]>;
+  addContactSocial(social: InsertContactSocial): Promise<ContactSocial>;
+  updateContactSocial(id: string, updates: Partial<InsertContactSocial>): Promise<ContactSocial>;
+  removeContactSocial(id: string): Promise<void>;
+
   // Audit operations
   logAudit(log: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(contactId?: string, userId?: string, limit?: number): Promise<AuditLog[]>;
@@ -83,6 +91,10 @@ export interface IStorage {
   updateUserNetwork(networkId: string, updates: UpdateUserNetwork): Promise<UserNetwork>;
   removeFromUserNetwork(networkId: string): Promise<void>;
   getNetworkById(networkId: string): Promise<UserNetwork | undefined>;
+  getUsersWithContactInNetwork(contactId: string): Promise<{ id: string; firstName: string | null; lastName: string | null; email: string }[]>;
+
+  // Contact aliases for fuzzy search
+  getContactAliases(contactId: string): Promise<{ id: string; contactId: string; alias: string }[]>;
 
   // Impact stats
   getImpactStats(): Promise<any>;
@@ -504,6 +516,29 @@ export class DatabaseStorage implements IStorage {
     await db.delete(contactEmails).where(eq(contactEmails.id, id));
   }
 
+  // Contact social media
+  async getContactSocials(contactId: string): Promise<ContactSocial[]> {
+    return await db.select().from(contactSocials).where(eq(contactSocials.contactId, contactId));
+  }
+
+  async addContactSocial(social: InsertContactSocial): Promise<ContactSocial> {
+    const [created] = await db.insert(contactSocials).values(social).returning();
+    return created;
+  }
+
+  async updateContactSocial(id: string, updates: Partial<InsertContactSocial>): Promise<ContactSocial> {
+    const [updated] = await db
+      .update(contactSocials)
+      .set(updates)
+      .where(eq(contactSocials.id, id))
+      .returning();
+    return updated;
+  }
+
+  async removeContactSocial(id: string): Promise<void> {
+    await db.delete(contactSocials).where(eq(contactSocials.id, id));
+  }
+
   // Audit operations
   async logAudit(log: InsertAuditLog): Promise<AuditLog> {
     const [created] = await db.insert(auditLogs).values(log).returning();
@@ -859,6 +894,27 @@ export class DatabaseStorage implements IStorage {
     return network;
   }
 
+  async getUsersWithContactInNetwork(contactId: string): Promise<{ id: string; firstName: string | null; lastName: string | null; email: string }[]> {
+    const result = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email
+      })
+      .from(userNetworks)
+      .innerJoin(users, eq(userNetworks.userId, users.id))
+      .where(eq(userNetworks.contactId, contactId));
+
+    return result;
+  }
+
+  async getContactAliases(contactId: string): Promise<{ id: string; contactId: string; alias: string }[]> {
+    // TODO: Implement contact aliases table and functionality
+    // For now, return empty array to prevent search service from crashing
+    return [];
+  }
+
   async getImpactStats(): Promise<any> {
     try {
       // Get total active voters
@@ -1002,6 +1058,13 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.isActive, true));
 
+      // Get unique contacts that have been added to any user's network
+      const [uniqueNetworkContactsResult] = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${userNetworks.contactId})` })
+        .from(userNetworks);
+
+      const uniqueNetworkContacts = uniqueNetworkContactsResult?.count || 0;
+
       // Sample goals - these could be configured in system settings
       const goals = [
         {
@@ -1041,7 +1104,8 @@ export class DatabaseStorage implements IStorage {
         },
         phoneNumbersAdded: phoneNumbersResult.count,
         emailAddressesAdded: emailAddressesResult.count,
-        activeVolunteers: activeVolunteersResult.count
+        activeVolunteers: activeVolunteersResult.count,
+        uniqueNetworkContacts: uniqueNetworkContacts
       };
     } catch (error) {
       console.error('Error fetching impact stats:', error);
@@ -1062,7 +1126,8 @@ export class DatabaseStorage implements IStorage {
         },
         phoneNumbersAdded: 0,
         emailAddressesAdded: 0,
-        activeVolunteers: 0
+        activeVolunteers: 0,
+        uniqueNetworkContacts: 0
       };
     }
   }

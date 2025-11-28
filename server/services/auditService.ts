@@ -1,5 +1,5 @@
 import { storage } from '../storage';
-import type { Contact, ContactPhone, ContactEmail, InsertAuditLog } from '@shared/schema';
+import type { Contact, ContactPhone, ContactEmail, ContactSocial, InsertAuditLog } from '@shared/schema';
 
 class AuditService {
   async logContactUpdate(originalContact: Contact, updatedContact: Contact, userId: string): Promise<void> {
@@ -266,6 +266,85 @@ class AuditService {
         timestamp: new Date().toISOString(),
         source: source, // 'manual' or 'excel_import'
         supporterStatus: contact.supporterStatus
+      }
+    });
+  }
+
+  async logSocialAdd(social: ContactSocial, userId: string): Promise<void> {
+    await storage.logAudit({
+      contactId: social.contactId,
+      userId,
+      action: 'create',
+      tableName: 'contact_socials',
+      recordId: social.id,
+      fieldName: 'handle',
+      oldValue: null,
+      newValue: social.handle,
+      metadata: {
+        platform: social.platform,
+        isPrimary: social.isPrimary,
+      }
+    });
+  }
+
+  async logSocialUpdate(socialId: string, oldSocial: ContactSocial, newSocial: ContactSocial, userId: string): Promise<void> {
+    const changes: Array<{
+      field: string;
+      oldValue: any;
+      newValue: any;
+    }> = [];
+
+    if (oldSocial.handle !== newSocial.handle) {
+      changes.push({
+        field: 'handle',
+        oldValue: oldSocial.handle,
+        newValue: newSocial.handle,
+      });
+    }
+
+    if (oldSocial.platform !== newSocial.platform) {
+      changes.push({
+        field: 'platform',
+        oldValue: oldSocial.platform,
+        newValue: newSocial.platform,
+      });
+    }
+
+    if (oldSocial.isPrimary !== newSocial.isPrimary) {
+      changes.push({
+        field: 'isPrimary',
+        oldValue: String(oldSocial.isPrimary),
+        newValue: String(newSocial.isPrimary),
+      });
+    }
+
+    for (const change of changes) {
+      await storage.logAudit({
+        contactId: oldSocial.contactId,
+        userId,
+        action: 'update',
+        tableName: 'contact_socials',
+        recordId: socialId,
+        fieldName: change.field,
+        oldValue: change.oldValue,
+        newValue: change.newValue,
+      });
+    }
+  }
+
+  async logSocialDelete(social: ContactSocial, userId: string): Promise<void> {
+    await storage.logAudit({
+      contactId: social.contactId,
+      userId,
+      action: 'delete',
+      tableName: 'contact_socials',
+      recordId: social.id,
+      fieldName: 'handle',
+      oldValue: social.handle,
+      newValue: null,
+      metadata: {
+        platform: social.platform,
+        isPrimary: social.isPrimary,
       }
     });
   }
