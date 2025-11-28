@@ -59,16 +59,14 @@ export default function ShareAnnaPage() {
       subject: "Why I'm supporting Anna for Orlando Mayor",
       body: `Hi [Friend's Name],
 
-I don't usually send political emails, but I wanted to share why I'm supporting Anna Eskamani for Mayor of Orlando.
-
-Anna has a proven record of leadership:
+I don't usually send political emails, but I wanted to share why I'm supporting Anna Eskamani for Mayor of Orlando. Anna has a proven record of leadership:
 
 • She's earned a doctorate in public policy.
 • Served 7 years as a State Representative, helping thousands of families.
 • Stood up to OUC to protect solar programs and renewable energy.
 • Donated her entire legislative salary for over two years to help families facing eviction.
 
-She's results-driven, compassionate, and focused on making Orlando better for all of us. I hope you'll join me in supporting her.
+She's results-driven, compassionate, and focused on making Orlando better for all of us. Will you join me in supporting her? If you are planning to vote in 2027 and support Anna's vision for Orlando, I will mark you down as a supporter in the campaign's relational organizing tool.
 
 Learn more: ${CAMPAIGN_URL}
 
@@ -78,14 +76,14 @@ Best,
     {
       id: "email2",
       title: "Every Vote Matters",
-      subject: "A quick reminder about why voting matters",
+      subject: "Every vote matters in 2027",
       body: `Hi [Friend's Name],
 
 The last mayoral race in Orlando had only 22% turnout — that means less than a quarter of our city made the decision for everyone else.
 
-In the upcoming election, every single vote will make a difference. That's why I'm supporting Anna Eskamani for Mayor. She's a leader who listens, delivers results, and puts people first.
+In the upcoming 2027 mayoral election, every single vote will make a difference. That's why I'm doing everything I can to support Anna Eskamani for Mayor.
 
-I'd love for you to join me in spreading the word and making sure our voices are heard this time.
+She's a leader who listens, delivers results, and puts people first. I'd love for you to join me in spreading the word and making sure our voices are heard this time. Can I count on you to support Anna for Mayor?
 
 Learn more: ${CAMPAIGN_URL}
 
@@ -95,18 +93,22 @@ Thanks,
     {
       id: "email3",
       title: "Anna Delivers Results",
-      subject: "Anna Eskamani delivers real results for Orlando",
+      subject: "Why I believe in Anna's leadership",
       body: `Hi [Friend's Name],
 
-Just wanted to share a little about why I believe in Anna Eskamani's leadership. She's results-oriented and has a track record of cutting through red tape to get things done.
+Just wanted to share a little about why I believe in Anna Eskamani's leadership. Anna has taken on insurance companies that are raising your rates, helped to secure unemployment compensation for tens of thousands of Floridians during COVID-19, protected our environment, passed important tax breaks (like for children's diapers) and has stood alongside Floridians in advocating for our freedoms.
 
-• Helped 40,000 Floridians navigate the broken unemployment system during COVID.
-• Secured bipartisan wins like a diaper tax exemption for families.
-• Advocates for affordable housing and small business growth right here in Orlando.
+As Orlando Mayor Anna will:
+- Fight to make our city more affordable
+- Build a world-class transportation system that connects our communities
+- Expand access to health care
+- Improve public safety
+- Support people with disabilities
+- Strengthen and enhance city services
 
-This is the kind of leadership we need for our city. Let's make it happen together.
+Can I count on you to vote for Anna in 2027?
 
-Learn more: ${CAMPAIGN_URL}
+Let's make it happen together. Learn more: ${CAMPAIGN_URL}
 
 Warmly,
 [Your Name]`
