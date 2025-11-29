@@ -917,11 +917,10 @@ export class DatabaseStorage implements IStorage {
 
   async getImpactStats(): Promise<any> {
     try {
-      // Get total active voters
+      // Get total registered voters (both active and inactive)
       const [totalActiveVotersResult] = await db
         .select({ count: count() })
-        .from(contacts)
-        .where(eq(contacts.voterStatus, 'ACT'));
+        .from(contacts);
 
       const totalActiveVoters = totalActiveVotersResult.count;
 
